@@ -209,6 +209,15 @@ export default function AdminPage() {
           <p className="mt-2 text-slate-600">
             Control operativo de pre-reservas, confirmaciones manuales y carga pendiente.
           </p>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/admin/login");
+            }}
+            className="mt-4 border rounded-xl px-4 py-2 text-sm hover:bg-slate-100"
+          >
+            Cerrar sesión
+          </button>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow no-print">

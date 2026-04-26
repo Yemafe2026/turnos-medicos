@@ -79,6 +79,10 @@ export default function LoginAdmin() {
         >
           {cargando ? "Ingresando..." : "Ingresar"}
         </button>
+        <div className="bg-slate-50 border rounded-xl p-3 text-sm text-slate-600">
+            Si olvidó su contraseña, solicite el restablecimiento al administrador general
+            por mail o WhatsApp.
+        </div>
       </div>
     </main>
   );
