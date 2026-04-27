@@ -372,6 +372,7 @@ export default function AdminPage() {
                   <th className="p-3 border">Hora</th>
                   <th className="p-3 border">Paciente</th>
                   <th className="p-3 border">DNI</th>
+                  <th className="p-3 border">Celular</th>
                   <th className="p-3 border">+65?</th>
                   <th className="p-3 border">Laboratorio anterior?</th>
                 </tr>
@@ -385,6 +386,7 @@ export default function AdminPage() {
                     </td>
                     <td className="p-3 border">{turno.nombre}</td>
                     <td className="p-3 border">{turno.dni}</td>
+                    <td className="p-3 border">{turno.celular || "-"}</td>
                     <td className="p-3 border">{turno.mayor65 || "-"}</td>
                     <td className="p-3 border">
                       {turno.laboratorio_reciente || "-"}
@@ -442,6 +444,7 @@ export default function AdminPage() {
                     <th className="p-3">Sede</th>
                     <th className="p-3">Paciente</th>
                     <th className="p-3">DNI</th>
+                    <th className="p-3">Celular</th>
                     <th className="p-3">Estado</th>
                     <th className="p-3">Motivo</th>
                     <th className="p-3">Acciones</th>
@@ -456,6 +459,7 @@ export default function AdminPage() {
                       <td className="p-3">{turno.locacion}</td>
                       <td className="p-3">{turno.nombre}</td>
                       <td className="p-3">{turno.dni}</td>
+                      <td className="p-3">{turno.celular || "-"}</td>
 
                       <td className="p-3">
                         <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold">
