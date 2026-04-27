@@ -35,6 +35,7 @@ export default function Home() {
   const [form, setForm] = useState({
     nombre: "",
     dni: "",
+    celular: "",
     mayor65: "",
     tieneLaboratorioReciente: "",
     locacion: "",
@@ -78,7 +79,7 @@ export default function Home() {
       return {
         texto: "Disponible",
         bloqueado: false,
-        clases: "bg-white hover:border-slate-900",
+        clases: "bg-white hover:border-orange-500",
       };
     }
 
@@ -107,12 +108,13 @@ export default function Home() {
         {
           nombre: form.nombre,
           dni: form.dni,
+          celular: form.celular,
+          mayor65: form.mayor65,
+          laboratorio_reciente: form.tieneLaboratorioReciente,
           locacion: form.locacion,
           fecha: form.fecha,
           horario: form.horario,
-          estado: "Pendiente",      
-          mayor65: form.mayor65,
-          laboratorio_reciente: form.tieneLaboratorioReciente,
+          estado: "Pendiente",
         },
       ]);
 
@@ -132,13 +134,21 @@ export default function Home() {
       <div className="mx-auto max-w-3xl">
         <section className="space-y-6">
           <div className="bg-white rounded-2xl p-6 shadow">
-            <h1 className="text-3xl font-bold text-slate-900">
-              Turnos Médicos
-            </h1>
+            <div className="text-center space-y-4">
+              <img
+                src="/logo.png"
+                alt="Laboral Salud"
+                className="h-24 mx-auto object-contain"
+              />
 
-            <p className="mt-2 text-slate-600">
-              Sistema de pre-reserva para certificados médicos de carné profesional.
-            </p>
+              <h1 className="text-3xl font-bold text-slate-800">
+                Gestión de Turnos Médicos
+              </h1>
+
+              <p className="text-slate-600">
+                Sistema de pre-reserva para certificaciones médicas laborales.
+              </p>
+            </div>
           </div>
 
           {paso === 1 && (
@@ -173,6 +183,21 @@ export default function Home() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Celular
+                </label>
+                <input
+                  type="text"
+                  className="w-full border rounded-xl p-3"
+                  placeholder="Ej. 2991234567"
+                  value={form.celular}
+                  onChange={(e) =>
+                    setForm({ ...form, celular: e.target.value })
+                  }
+                />
+              </div>
+
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <label className="block text-sm font-semibold mb-2">
                   ¿Tiene 65 años o más?
@@ -182,11 +207,10 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, mayor65: "Sí" })}
-                    className={`flex-1 rounded-xl border p-3 ${
-                      form.mayor65 === "Sí"
-                        ? "bg-slate-900 text-white"
+                    className={`flex-1 rounded-xl border p-3 ${form.mayor65 === "Sí"
+                        ? "bg-orange-500 text-white"
                         : "bg-white"
-                    }`}
+                      }`}
                   >
                     Sí
                   </button>
@@ -194,11 +218,10 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, mayor65: "No" })}
-                    className={`flex-1 rounded-xl border p-3 ${
-                      form.mayor65 === "No"
-                        ? "bg-slate-900 text-white"
+                    className={`flex-1 rounded-xl border p-3 ${form.mayor65 === "No"
+                        ? "bg-orange-500 text-white"
                         : "bg-white"
-                    }`}
+                      }`}
                   >
                     No
                   </button>
@@ -225,11 +248,10 @@ export default function Home() {
                     onClick={() =>
                       setForm({ ...form, tieneLaboratorioReciente: "Sí" })
                     }
-                    className={`flex-1 rounded-xl border p-3 ${
-                      form.tieneLaboratorioReciente === "Sí"
-                        ? "bg-slate-900 text-white"
+                    className={`flex-1 rounded-xl border p-3 ${form.tieneLaboratorioReciente === "Sí"
+                        ? "bg-orange-500 text-white"
                         : "bg-white"
-                    }`}
+                      }`}
                   >
                     Sí
                   </button>
@@ -239,11 +261,10 @@ export default function Home() {
                     onClick={() =>
                       setForm({ ...form, tieneLaboratorioReciente: "No" })
                     }
-                    className={`flex-1 rounded-xl border p-3 ${
-                      form.tieneLaboratorioReciente === "No"
-                        ? "bg-slate-900 text-white"
+                    className={`flex-1 rounded-xl border p-3 ${form.tieneLaboratorioReciente === "No"
+                        ? "bg-orange-500 text-white"
                         : "bg-white"
-                    }`}
+                      }`}
                   >
                     No
                   </button>
@@ -305,13 +326,14 @@ export default function Home() {
                 disabled={
                   !form.nombre ||
                   !form.dni ||
+                  !form.celular ||
                   !form.mayor65 ||
                   !form.tieneLaboratorioReciente ||
                   !form.locacion ||
                   !form.fecha
                 }
                 onClick={() => setPaso(2)}
-                className="w-full bg-slate-900 text-white rounded-xl p-3 disabled:bg-slate-300"
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
               >
                 Continuar
               </button>
@@ -351,11 +373,10 @@ export default function Home() {
                       onClick={() =>
                         setForm({ ...form, horario: hora })
                       }
-                      className={`rounded-xl border p-4 text-left ${
-                        seleccionado
-                          ? "bg-slate-900 text-white"
+                      className={`rounded-xl border p-4 text-left ${seleccionado
+                          ? "bg-orange-500 text-white"
                           : estado.clases
-                      }`}
+                        }`}
                     >
                       <div className="font-bold">{hora}</div>
                       <div className="text-xs">{estado.texto}</div>
@@ -381,7 +402,7 @@ export default function Home() {
                 <button
                   disabled={!form.horario || cargando}
                   onClick={generarPreReserva}
-                  className="flex-1 bg-slate-900 text-white rounded-xl p-3 disabled:bg-slate-300"
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
                 >
                   {cargando ? "Guardando..." : "Generar pre-reserva"}
                 </button>
@@ -409,6 +430,7 @@ export default function Home() {
               <div className="text-sm space-y-1">
                 <p><strong>Paciente:</strong> {form.nombre}</p>
                 <p><strong>DNI:</strong> {form.dni}</p>
+                <p><strong>Celular:</strong> {form.celular}</p>
                 <p><strong>Locación:</strong> {form.locacion}</p>
                 <p><strong>Fecha:</strong> {form.fecha}</p>
                 <p><strong>Horario del circuito médico:</strong> {form.horario}</p>
@@ -473,6 +495,7 @@ export default function Home() {
                   setForm({
                     nombre: "",
                     dni: "",
+                    celular: "",
                     mayor65: "",
                     tieneLaboratorioReciente: "",
                     locacion: "",

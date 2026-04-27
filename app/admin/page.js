@@ -42,13 +42,16 @@ function obtenerSemanaActual() {
 
 export default function AdminPage() {
   const router = useRouter();
+
   const [turnos, setTurnos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [motivos, setMotivos] = useState({});
 
   const [sedeImpresion, setSedeImpresion] = useState("Sede Cipolletti");
-  const [fechaImpresion, setFechaImpresion] = useState(formatearFecha(new Date()));
+  const [fechaImpresion, setFechaImpresion] = useState(
+    formatearFecha(new Date())
+  );
 
   const semanaActual = obtenerSemanaActual();
 
@@ -116,7 +119,11 @@ export default function AdminPage() {
     cargarTurnos();
   };
 
-    useEffect(() => {
+  const imprimirListado = () => {
+    window.print();
+  };
+
+  useEffect(() => {
     const verificarSesion = async () => {
       const { data } = await supabase.auth.getSession();
 
@@ -134,16 +141,21 @@ export default function AdminPage() {
   const turnosSemanaActual = useMemo(() => {
     return turnos.filter(
       (turno) =>
-        turno.fecha >= semanaActual.inicio &&
-        turno.fecha <= semanaActual.fin
+        turno.fecha >= semanaActual.inicio && turno.fecha <= semanaActual.fin
     );
   }, [turnos, semanaActual.inicio, semanaActual.fin]);
 
   const reportes = useMemo(() => {
     const total = turnosSemanaActual.length;
-    const pendientes = turnosSemanaActual.filter((t) => t.estado === "Pendiente").length;
-    const confirmados = turnosSemanaActual.filter((t) => t.estado === "Confirmado").length;
-    const noConfirmados = turnosSemanaActual.filter((t) => t.estado === "No Confirmado").length;
+    const pendientes = turnosSemanaActual.filter(
+      (t) => t.estado === "Pendiente"
+    ).length;
+    const confirmados = turnosSemanaActual.filter(
+      (t) => t.estado === "Confirmado"
+    ).length;
+    const noConfirmados = turnosSemanaActual.filter(
+      (t) => t.estado === "No Confirmado"
+    ).length;
 
     const porSede = turnosSemanaActual.reduce((acc, turno) => {
       acc[turno.locacion] = (acc[turno.locacion] || 0) + 1;
@@ -167,10 +179,6 @@ export default function AdminPage() {
       turno.locacion === sedeImpresion &&
       turno.fecha === fechaImpresion
   );
-
-  const imprimirListado = () => {
-    window.print();
-  };
 
   return (
     <main className="min-h-screen bg-slate-100 p-6">
@@ -202,22 +210,35 @@ export default function AdminPage() {
 
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="bg-white rounded-2xl p-6 shadow no-print">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Panel de Recepción
-          </h1>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <img
+                src="/logo.png"
+                alt="Laboral Salud"
+                className="h-16 object-contain"
+              />
 
-          <p className="mt-2 text-slate-600">
-            Control operativo de pre-reservas, confirmaciones manuales y carga pendiente.
-          </p>
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.push("/admin/login");
-            }}
-            className="mt-4 border rounded-xl px-4 py-2 text-sm hover:bg-slate-100"
-          >
-            Cerrar sesión
-          </button>
+              <div>
+                <h1 className="text-3xl font-bold text-slate-800">
+                  Panel de Recepción
+                </h1>
+
+                <p className="text-slate-500">
+                  Laboral Salud · Gestión operativa de turnos
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push("/admin/login");
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-5 py-3"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow no-print">
@@ -269,7 +290,8 @@ export default function AdminPage() {
           </h2>
 
           <p className="text-sm text-slate-500 mb-4">
-            Incluye reservas con fecha entre {semanaActual.inicio} y {semanaActual.fin}.
+            Incluye reservas con fecha entre {semanaActual.inicio} y{" "}
+            {semanaActual.fin}.
           </p>
 
           <div className="grid gap-3 md:grid-cols-3">
@@ -291,9 +313,7 @@ export default function AdminPage() {
 
           <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Sede
-              </label>
+              <label className="block text-sm font-medium mb-1">Sede</label>
 
               <select
                 className="w-full border rounded-xl p-3 bg-white"
@@ -309,9 +329,7 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Fecha
-              </label>
+              <label className="block text-sm font-medium mb-1">Fecha</label>
 
               <input
                 type="date"
@@ -323,7 +341,7 @@ export default function AdminPage() {
 
             <button
               onClick={imprimirListado}
-              className="bg-slate-900 text-white rounded-xl px-5 py-3"
+              className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-5 py-3"
             >
               Imprimir listado
             </button>
@@ -362,11 +380,15 @@ export default function AdminPage() {
               <tbody>
                 {turnosParaImprimir.map((turno) => (
                   <tr key={turno.id} className="border-b">
-                    <td className="p-3 border font-semibold">{turno.horario}</td>
+                    <td className="p-3 border font-semibold">
+                      {turno.horario}
+                    </td>
                     <td className="p-3 border">{turno.nombre}</td>
                     <td className="p-3 border">{turno.dni}</td>
                     <td className="p-3 border">{turno.mayor65 || "-"}</td>
-                    <td className="p-3 border">{turno.laboratorio_reciente || "-"}</td>
+                    <td className="p-3 border">
+                      {turno.laboratorio_reciente || "-"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -381,7 +403,8 @@ export default function AdminPage() {
                 Pendientes por validar
               </h2>
               <p className="text-sm text-slate-500">
-                Muestra todas las pre-reservas pendientes, independientemente de la fecha del turno.
+                Muestra todas las pre-reservas pendientes, independientemente de
+                la fecha del turno.
               </p>
             </div>
 
@@ -394,9 +417,7 @@ export default function AdminPage() {
           </div>
 
           {cargando && (
-            <p className="text-slate-500 text-sm">
-              Cargando turnos...
-            </p>
+            <p className="text-slate-500 text-sm">Cargando turnos...</p>
           )}
 
           {error && (

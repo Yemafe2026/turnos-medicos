@@ -34,9 +34,17 @@ export default function LoginAdmin() {
   return (
     <main className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow p-6 w-full max-w-md space-y-4">
-        <h1 className="text-2xl font-bold">
+       <div className="text-center space-y-3">
+        <img
+          src="/logo.png"
+          alt="Laboral Salud"
+          className="h-20 mx-auto object-contain"
+        />
+
+        <h1 className="text-2xl font-bold text-slate-800">
           Ingreso Administración
         </h1>
+       </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
