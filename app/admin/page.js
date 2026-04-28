@@ -15,6 +15,7 @@ const estados = [
   "Pendiente",
   "Confirmado",
   "No Confirmado",
+  "Ausente",
 ];
 
 function hoyISO() {
@@ -24,6 +25,10 @@ function hoyISO() {
 function badgeEstado(estado) {
   if (estado === "Confirmado") {
     return "bg-green-100 text-green-800";
+  }
+
+  if (estado === "Ausente") {
+    return "bg-slate-200 text-slate-800";
   }
 
   if (estado === "No Confirmado") {
@@ -199,6 +204,7 @@ export default function AdminPage() {
       .from("turnos")
       .update({
         ausente: true,
+        estado: "Ausente",
       })
       .eq("id", id);
 
