@@ -22,8 +22,12 @@ const horarios = [
   "11:00", "11:20", "11:40",
   "12:00", "12:20", "12:40",
   "13:00", "13:20", "13:40",
-  "14:00"
+  "14:00",
 ];
+
+const normalizarCelular = (valor) => {
+  return valor.replace(/\D/g, "");
+};
 
 export default function Home() {
   const [paso, setPaso] = useState(1);
@@ -42,6 +46,15 @@ export default function Home() {
     fecha: "",
     horario: "",
   });
+
+  const formularioPaso1Completo =
+    form.nombre.trim() &&
+    form.dni.trim() &&
+    form.celular.trim() &&
+    form.mayor65 &&
+    form.tieneLaboratorioReciente &&
+    form.locacion &&
+    form.fecha;
 
   const cargarTurnosExistentes = async () => {
     if (!form.locacion || !form.fecha) return;
@@ -79,7 +92,7 @@ export default function Home() {
       return {
         texto: "Disponible",
         bloqueado: false,
-        clases: "bg-white hover:border-orange-500",
+        clases: "bg-white hover:border-orange-500 hover:bg-orange-50",
       };
     }
 
@@ -87,46 +100,107 @@ export default function Home() {
       return {
         texto: "Reserva confirmada",
         bloqueado: true,
-        clases: "bg-green-100 text-green-800 border-green-300 cursor-not-allowed",
+        clases:
+          "bg-green-100 text-green-800 border-green-300 cursor-not-allowed",
+      };
+    }
+
+    if (turno.estado === "Cancelado") {
+      return {
+        texto: "Disponible",
+        bloqueado: false,
+        clases: "bg-white hover:border-orange-500 hover:bg-orange-50",
       };
     }
 
     return {
       texto: "Pre-reserva activa",
       bloqueado: true,
-      clases: "bg-amber-100 text-amber-800 border-amber-300 cursor-not-allowed",
+      clases:
+        "bg-amber-100 text-amber-800 border-amber-300 cursor-not-allowed",
     };
   };
 
+  const avanzarAPaso2 = () => {
+    setError("");
+
+    const celularLimpio = normalizarCelular(form.celular);
+
+    if (!formularioPaso1Completo) {
+      setError("Complete todos los datos antes de continuar.");
+      return;
+    }
+
+    if (celularLimpio.length < 8) {
+      setError("Ingrese un número de celular válido.");
+      return;
+    }
+
+    setForm({
+      ...form,
+      nombre: form.nombre.trim(),
+      dni: form.dni.trim(),
+      celular: celularLimpio,
+    });
+
+    setPaso(2);
+  };
+
   const generarPreReserva = async () => {
+    if (!form.horario) {
+      setError("Seleccione un horario disponible.");
+      return;
+    }
+
     setCargando(true);
     setError("");
 
-    const { error } = await supabase
-      .from("turnos")
-      .insert([
-        {
-          nombre: form.nombre,
-          dni: form.dni,
-          celular: form.celular,
-          mayor65: form.mayor65,
-          laboratorio_reciente: form.tieneLaboratorioReciente,
-          locacion: form.locacion,
-          fecha: form.fecha,
-          horario: form.horario,
-          estado: "Pendiente",
-        },
-      ]);
+    const celularLimpio = normalizarCelular(form.celular);
+
+    const { error } = await supabase.from("turnos").insert([
+      {
+        nombre: form.nombre.trim(),
+        dni: form.dni.trim(),
+        celular: celularLimpio,
+        mayor65: form.mayor65,
+        laboratorio_reciente: form.tieneLaboratorioReciente,
+        locacion: form.locacion,
+        fecha: form.fecha,
+        horario: form.horario,
+        estado: "Pendiente",
+      },
+    ]);
 
     setCargando(false);
 
     if (error) {
-      setError("No se pudo generar la pre-reserva. Intente nuevamente.");
       console.error(error);
+      setError("No se pudo generar la pre-reserva. Intente nuevamente.");
       return;
     }
 
+    setForm({
+      ...form,
+      celular: celularLimpio,
+    });
+
     setPaso(3);
+  };
+
+  const reiniciarFormulario = () => {
+    setPaso(1);
+    setError("");
+    setTurnosExistentes([]);
+    setForm({
+      nombre: "",
+      dni: "",
+      celular: "",
+      mayor65: "",
+      tieneLaboratorioReciente: "",
+      locacion: "",
+      fecha: "",
+      horario: "",
+    });
   };
 
   return (
@@ -151,6 +225,41 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <div className="grid grid-cols-3 gap-2 text-center text-sm">
+              <div
+                className={`rounded-xl p-2 ${paso === 1
+                  ? "bg-orange-500 text-white"
+                  : "bg-slate-100 text-slate-600"
+                  }`}
+              >
+                1. Datos
+              </div>
+              <div
+                className={`rounded-xl p-2 ${paso === 2
+                  ? "bg-orange-500 text-white"
+                  : "bg-slate-100 text-slate-600"
+                  }`}
+              >
+                2. Horario
+              </div>
+              <div
+                className={`rounded-xl p-2 ${paso === 3
+                  ? "bg-orange-500 text-white"
+                  : "bg-slate-100 text-slate-600"
+                  }`}
+              >
+                3. Pre-reserva
+              </div>
+            </div>
+          </div>
+
+          {error && paso === 1 && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
+              {error}
+            </div>
+          )}
+
           {paso === 1 && (
             <div className="bg-white rounded-2xl p-6 shadow space-y-4">
               <h2 className="text-xl font-semibold">
@@ -167,19 +276,22 @@ export default function Home() {
                   onChange={(e) =>
                     setForm({ ...form, nombre: e.target.value })
                   }
+                  placeholder="Ej. Juan Pérez"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  DNI
-                </label>
+                <label className="block text-sm font-medium mb-1">DNI</label>
                 <input
                   className="w-full border rounded-xl p-3"
                   value={form.dni}
                   onChange={(e) =>
-                    setForm({ ...form, dni: e.target.value })
+                    setForm({
+                      ...form,
+                      dni: e.target.value.replace(/\D/g, ""),
+                    })
                   }
+                  placeholder="Ej. 30123456"
                 />
               </div>
 
@@ -193,9 +305,15 @@ export default function Home() {
                   placeholder="Ej. 2991234567"
                   value={form.celular}
                   onChange={(e) =>
-                    setForm({ ...form, celular: e.target.value })
+                    setForm({
+                      ...form,
+                      celular: normalizarCelular(e.target.value),
+                    })
                   }
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Ingrese solo números, sin espacios ni guiones.
+                </p>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -208,8 +326,8 @@ export default function Home() {
                     type="button"
                     onClick={() => setForm({ ...form, mayor65: "Sí" })}
                     className={`flex-1 rounded-xl border p-3 ${form.mayor65 === "Sí"
-                        ? "bg-orange-500 text-white"
-                        : "bg-white"
+                      ? "bg-orange-500 text-white"
+                      : "bg-white"
                       }`}
                   >
                     Sí
@@ -219,8 +337,8 @@ export default function Home() {
                     type="button"
                     onClick={() => setForm({ ...form, mayor65: "No" })}
                     className={`flex-1 rounded-xl border p-3 ${form.mayor65 === "No"
-                        ? "bg-orange-500 text-white"
-                        : "bg-white"
+                      ? "bg-orange-500 text-white"
+                      : "bg-white"
                       }`}
                   >
                     No
@@ -230,16 +348,17 @@ export default function Home() {
                 {form.mayor65 === "Sí" && (
                   <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
                     Antes de continuar, deberá consultar previamente por WhatsApp
-                    al número <strong>A DEFINIR</strong>, ya que debe coordinarse
-                    un estudio particular requerido por la Superintendencia de
-                    Transporte de la Nación.
+                    al número <strong>A DEFINIR</strong>, ya que debe
+                    coordinarse un estudio particular requerido por la
+                    Superintendencia de Transporte de la Nación.
                   </div>
                 )}
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <label className="block text-sm font-semibold mb-2">
-                  ¿Tiene estudios de laboratorio realizados dentro de los últimos 90 días?
+                  ¿Tiene estudios de laboratorio realizados dentro de los
+                  últimos 90 días?
                 </label>
 
                 <div className="flex gap-3">
@@ -249,8 +368,8 @@ export default function Home() {
                       setForm({ ...form, tieneLaboratorioReciente: "Sí" })
                     }
                     className={`flex-1 rounded-xl border p-3 ${form.tieneLaboratorioReciente === "Sí"
-                        ? "bg-orange-500 text-white"
-                        : "bg-white"
+                      ? "bg-orange-500 text-white"
+                      : "bg-white"
                       }`}
                   >
                     Sí
@@ -262,8 +381,8 @@ export default function Home() {
                       setForm({ ...form, tieneLaboratorioReciente: "No" })
                     }
                     className={`flex-1 rounded-xl border p-3 ${form.tieneLaboratorioReciente === "No"
-                        ? "bg-orange-500 text-white"
-                        : "bg-white"
+                      ? "bg-orange-500 text-white"
+                      : "bg-white"
                       }`}
                   >
                     No
@@ -272,8 +391,9 @@ export default function Home() {
 
                 {form.tieneLaboratorioReciente === "Sí" && (
                   <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
-                    Deberá enviar los estudios al mail <strong>A DEFINIR</strong>.
-                    Desde allí se le indicará cómo continuar con el proceso.
+                    Deberá enviar los estudios al mail{" "}
+                    <strong>A DEFINIR</strong>. Desde allí se le indicará cómo
+                    continuar con el proceso.
                   </div>
                 )}
               </div>
@@ -304,9 +424,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Fecha
-                </label>
+                <label className="block text-sm font-medium mb-1">Fecha</label>
 
                 <input
                   type="date"
@@ -323,16 +441,8 @@ export default function Home() {
               </div>
 
               <button
-                disabled={
-                  !form.nombre ||
-                  !form.dni ||
-                  !form.celular ||
-                  !form.mayor65 ||
-                  !form.tieneLaboratorioReciente ||
-                  !form.locacion ||
-                  !form.fecha
-                }
-                onClick={() => setPaso(2)}
+                disabled={!formularioPaso1Completo}
+                onClick={avanzarAPaso2}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
               >
                 Continuar
@@ -342,16 +452,17 @@ export default function Home() {
 
           {paso === 2 && (
             <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-              <h2 className="text-xl font-semibold">
-                2. Elegir horario
-              </h2>
+              <h2 className="text-xl font-semibold">2. Elegir horario</h2>
 
-              <div className="text-sm text-slate-600 space-y-1">
+              <div className="bg-slate-50 border rounded-xl p-4 text-sm text-slate-700 space-y-1">
                 <p>
-                  Locación seleccionada: <strong>{form.locacion}</strong>
+                  <strong>Paciente:</strong> {form.nombre}
                 </p>
                 <p>
-                  Fecha seleccionada: <strong>{form.fecha}</strong>
+                  <strong>Locación:</strong> {form.locacion}
+                </p>
+                <p>
+                  <strong>Fecha:</strong> {form.fecha}
                 </p>
               </div>
 
@@ -369,13 +480,12 @@ export default function Home() {
                   return (
                     <button
                       key={hora}
+                      type="button"
                       disabled={estado.bloqueado}
-                      onClick={() =>
-                        setForm({ ...form, horario: hora })
-                      }
-                      className={`rounded-xl border p-4 text-left ${seleccionado
-                          ? "bg-orange-500 text-white"
-                          : estado.clases
+                      onClick={() => setForm({ ...form, horario: hora })}
+                      className={`rounded-xl border p-4 text-left transition ${seleccionado
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : estado.clases
                         }`}
                     >
                       <div className="font-bold">{hora}</div>
@@ -393,13 +503,18 @@ export default function Home() {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setPaso(1)}
+                  type="button"
+                  onClick={() => {
+                    setError("");
+                    setPaso(1);
+                  }}
                   className="flex-1 border rounded-xl p-3"
                 >
                   Volver
                 </button>
 
                 <button
+                  type="button"
                   disabled={!form.horario || cargando}
                   onClick={generarPreReserva}
                   className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
@@ -417,23 +532,40 @@ export default function Home() {
               </h2>
 
               <p>
-                Su turno quedó reservado provisoriamente por <strong>1 hora</strong>.
+                Su turno quedó reservado provisoriamente por{" "}
+                <strong>1 hora</strong>.
               </p>
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                Para confirmar la reserva debe realizar transferencia bancaria y enviar
-                el comprobante indicando DNI.
+                Para confirmar la reserva debe realizar transferencia bancaria y
+                enviar el comprobante indicando DNI.
                 <br />
-                La confirmación final será realizada manualmente por administración.
+                La confirmación final será realizada manualmente por
+                administración.
               </div>
 
-              <div className="text-sm space-y-1">
-                <p><strong>Paciente:</strong> {form.nombre}</p>
-                <p><strong>DNI:</strong> {form.dni}</p>
-                <p><strong>Celular:</strong> {form.celular}</p>
-                <p><strong>Locación:</strong> {form.locacion}</p>
-                <p><strong>Fecha:</strong> {form.fecha}</p>
-                <p><strong>Horario del circuito médico:</strong> {form.horario}</p>
+              <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+                <p>
+                  <strong>Paciente:</strong> {form.nombre}
+                </p>
+                <p>
+                  <strong>DNI:</strong> {form.dni}
+                </p>
+                <p>
+                  <strong>Celular:</strong> {form.celular}
+                </p>
+                <p>
+                  <strong>Locación:</strong> {form.locacion}
+                </p>
+                <p>
+                  <strong>Fecha:</strong> {form.fecha}
+                </p>
+                <p>
+                  <strong>Horario del circuito médico:</strong> {form.horario}
+                </p>
+                <p>
+                  <strong>Estado:</strong> Pendiente de confirmación
+                </p>
               </div>
 
               {form.mayor65 === "Sí" && (
@@ -442,8 +574,8 @@ export default function Home() {
                     Aviso importante para mayores de 65 años
                   </h3>
                   <p>
-                    Deberá consultar previamente por WhatsApp al número
-                    <strong> A DEFINIR</strong>, ya que debe coordinarse un
+                    Deberá consultar previamente por WhatsApp al número{" "}
+                    <strong>A DEFINIR</strong>, ya que debe coordinarse un
                     estudio particular requerido por la Superintendencia de
                     Transporte de la Nación.
                   </p>
@@ -456,12 +588,12 @@ export default function Home() {
                     Estudios de laboratorio recientes
                   </h3>
                   <p>
-                    Usted indicó que posee estudios de laboratorio realizados dentro
-                    de los últimos 90 días.
+                    Usted indicó que posee estudios de laboratorio realizados
+                    dentro de los últimos 90 días.
                   </p>
                   <p>
-                    Deberá enviarlos al mail <strong>A DEFINIR</strong>. Desde allí
-                    se le indicará cómo continuar con el proceso.
+                    Deberá enviarlos al mail <strong>A DEFINIR</strong>. Desde
+                    allí se le indicará cómo continuar con el proceso.
                   </p>
                 </div>
               )}
@@ -473,8 +605,9 @@ export default function Home() {
                   </h3>
 
                   <p>
-                    El estudio de laboratorio se realiza a primera hora, por orden de llegada.
-                    Deberá presentarse a las <strong>07:00 hs</strong>.
+                    El estudio de laboratorio se realiza a primera hora, por
+                    orden de llegada. Deberá presentarse a las{" "}
+                    <strong>07:00 hs</strong>.
                   </p>
 
                   <p>
@@ -483,27 +616,16 @@ export default function Home() {
                   </p>
 
                   <p>
-                    <strong>Indicaciones previas:</strong> deberá presentarse con un
-                    ayuno mínimo de <strong>8 horas</strong>, salvo indicación médica diferente.
+                    <strong>Indicaciones previas:</strong> deberá presentarse
+                    con un ayuno mínimo de <strong>8 horas</strong>, salvo
+                    indicación médica diferente.
                   </p>
                 </div>
               )}
 
               <button
-                onClick={() => {
-                  setPaso(1);
-                  setForm({
-                    nombre: "",
-                    dni: "",
-                    celular: "",
-                    mayor65: "",
-                    tieneLaboratorioReciente: "",
-                    locacion: "",
-                    fecha: "",
-                    horario: "",
-                  });
-                  setTurnosExistentes([]);
-                }}
+                type="button"
+                onClick={reiniciarFormulario}
                 className="w-full border rounded-xl p-3"
               >
                 Nueva pre-reserva

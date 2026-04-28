@@ -17,6 +17,8 @@ const sedes = [
   "Sede Plaza Huincul",
 ];
 
+const estados = ["Todos", "Pendiente", "Confirmado", "No Confirmado"];
+
 function formatearFecha(fecha) {
   return fecha.toISOString().split("T")[0];
 }
@@ -40,6 +42,26 @@ function obtenerSemanaActual() {
   };
 }
 
+function badgeEstado(estado) {
+  if (estado === "Confirmado") {
+    return "bg-green-100 text-green-800";
+  }
+
+  if (estado === "No Confirmado") {
+    return "bg-red-100 text-red-800";
+  }
+
+  return "bg-amber-100 text-amber-800";
+}
+
+function crearLinkWhatsapp(turno) {
+  const celular = turno.celular || "";
+
+  const mensaje = `Hola ${turno.nombre}, te contactamos de Laboral Salud por tu turno del día ${turno.fecha} a las ${turno.horario} en ${turno.locacion}.`;
+
+  return `https://wa.me/54${celular}?text=${encodeURIComponent(mensaje)}`;
+}
+
 export default function AdminPage() {
   const router = useRouter();
 
@@ -47,6 +69,11 @@ export default function AdminPage() {
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
   const [motivos, setMotivos] = useState({});
+
+  const [filtroEstado, setFiltroEstado] = useState("Todos");
+  const [filtroSede, setFiltroSede] = useState("Todas");
+  const [filtroFecha, setFiltroFecha] = useState("");
+  const [busqueda, setBusqueda] = useState("");
 
   const [sedeImpresion, setSedeImpresion] = useState("Sede Cipolletti");
   const [fechaImpresion, setFechaImpresion] = useState(
@@ -147,12 +174,15 @@ export default function AdminPage() {
 
   const reportes = useMemo(() => {
     const total = turnosSemanaActual.length;
+
     const pendientes = turnosSemanaActual.filter(
       (t) => t.estado === "Pendiente"
     ).length;
+
     const confirmados = turnosSemanaActual.filter(
       (t) => t.estado === "Confirmado"
     ).length;
+
     const noConfirmados = turnosSemanaActual.filter(
       (t) => t.estado === "No Confirmado"
     ).length;
@@ -170,6 +200,27 @@ export default function AdminPage() {
       porSede,
     };
   }, [turnosSemanaActual]);
+
+  const turnosFiltrados = useMemo(() => {
+    return turnos.filter((turno) => {
+      const coincideEstado =
+        filtroEstado === "Todos" || turno.estado === filtroEstado;
+
+      const coincideSede =
+        filtroSede === "Todas" || turno.locacion === filtroSede;
+
+      const coincideFecha = !filtroFecha || turno.fecha === filtroFecha;
+
+      const textoBusqueda = `${turno.nombre || ""} ${turno.dni || ""} ${turno.celular || ""
+        }`.toLowerCase();
+
+      const coincideBusqueda = textoBusqueda.includes(busqueda.toLowerCase());
+
+      return (
+        coincideEstado && coincideSede && coincideFecha && coincideBusqueda
+      );
+    });
+  }, [turnos, filtroEstado, filtroSede, filtroFecha, busqueda]);
 
   const turnosPendientes = turnos.filter((t) => t.estado === "Pendiente");
 
@@ -399,14 +450,11 @@ export default function AdminPage() {
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow no-print">
-          <div className="flex items-center justify-between gap-4 mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <div>
-              <h2 className="text-xl font-semibold">
-                Pendientes por validar
-              </h2>
+              <h2 className="text-xl font-semibold">Gestión de turnos</h2>
               <p className="text-sm text-slate-500">
-                Muestra todas las pre-reservas pendientes, independientemente de
-                la fecha del turno.
+                Buscá, filtrá, confirmá o no confirmá reservas.
               </p>
             </div>
 
@@ -416,6 +464,52 @@ export default function AdminPage() {
             >
               Actualizar
             </button>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-4 mb-5">
+            <input
+              className="border rounded-xl p-3"
+              placeholder="Buscar por nombre, DNI o celular"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+
+            <select
+              className="border rounded-xl p-3 bg-white"
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+            >
+              {estados.map((estado) => (
+                <option key={estado} value={estado}>
+                  {estado}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="border rounded-xl p-3 bg-white"
+              value={filtroSede}
+              onChange={(e) => setFiltroSede(e.target.value)}
+            >
+              <option value="Todas">Todas las sedes</option>
+              {sedes.map((sede) => (
+                <option key={sede} value={sede}>
+                  {sede}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              className="border rounded-xl p-3"
+              value={filtroFecha}
+              onChange={(e) => setFiltroFecha(e.target.value)}
+            />
+          </div>
+
+          <div className="mb-4 text-sm text-slate-500">
+            Pendientes actuales: <strong>{turnosPendientes.length}</strong> ·
+            Resultados filtrados: <strong>{turnosFiltrados.length}</strong>
           </div>
 
           {cargando && (
@@ -428,13 +522,13 @@ export default function AdminPage() {
             </div>
           )}
 
-          {!cargando && turnosPendientes.length === 0 && (
+          {!cargando && turnosFiltrados.length === 0 && (
             <p className="text-slate-500 text-sm">
-              No hay reservas pendientes en este momento.
+              No hay turnos para los filtros seleccionados.
             </p>
           )}
 
-          {turnosPendientes.length > 0 && (
+          {turnosFiltrados.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -452,7 +546,7 @@ export default function AdminPage() {
                 </thead>
 
                 <tbody>
-                  {turnosPendientes.map((turno) => (
+                  {turnosFiltrados.map((turno) => (
                     <tr key={turno.id} className="border-b align-top">
                       <td className="p-3">{turno.fecha}</td>
                       <td className="p-3 font-semibold">{turno.horario}</td>
@@ -462,47 +556,70 @@ export default function AdminPage() {
                       <td className="p-3">{turno.celular || "-"}</td>
 
                       <td className="p-3">
-                        <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold">
-                          {turno.estado}
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeEstado(
+                            turno.estado
+                          )}`}
+                        >
+                          {turno.estado || "Pendiente"}
                         </span>
                       </td>
 
                       <td className="p-3 min-w-[220px]">
-                        <select
-                          className="w-full border rounded-xl p-2 bg-white text-xs"
-                          value={motivos[turno.id] || ""}
-                          onChange={(e) =>
-                            setMotivos({
-                              ...motivos,
-                              [turno.id]: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">Motivo para no confirmar</option>
+                        {turno.estado === "No Confirmado" ? (
+                          <span className="text-xs text-slate-600">
+                            {turno.motivo_no_confirmacion || "-"}
+                          </span>
+                        ) : (
+                          <select
+                            className="w-full border rounded-xl p-2 bg-white text-xs"
+                            value={motivos[turno.id] || ""}
+                            onChange={(e) =>
+                              setMotivos({
+                                ...motivos,
+                                [turno.id]: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="">Motivo para no confirmar</option>
 
-                          {motivosNoConfirmacion.map((motivo) => (
-                            <option key={motivo} value={motivo}>
-                              {motivo}
-                            </option>
-                          ))}
-                        </select>
+                            {motivosNoConfirmacion.map((motivo) => (
+                              <option key={motivo} value={motivo}>
+                                {motivo}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </td>
 
-                      <td className="p-3 min-w-[230px]">
-                        <div className="flex gap-2">
+                      <td className="p-3 min-w-[330px]">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => confirmarTurno(turno.id)}
-                            className="bg-green-700 text-white rounded-xl px-3 py-2 text-xs"
+                            disabled={turno.estado === "Confirmado"}
+                            className="bg-green-700 text-white rounded-xl px-3 py-2 text-xs disabled:bg-slate-300"
                           >
                             Confirmar
                           </button>
 
                           <button
                             onClick={() => noConfirmarTurno(turno.id)}
-                            className="bg-red-700 text-white rounded-xl px-3 py-2 text-xs"
+                            disabled={turno.estado === "No Confirmado"}
+                            className="bg-red-700 text-white rounded-xl px-3 py-2 text-xs disabled:bg-slate-300"
                           >
                             No confirmar
                           </button>
+
+                          {turno.celular && (
+                            <a
+                              href={crearLinkWhatsapp(turno)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="bg-emerald-600 text-white rounded-xl px-3 py-2 text-xs"
+                            >
+                              WhatsApp
+                            </a>
+                          )}
                         </div>
                       </td>
                     </tr>
