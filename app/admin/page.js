@@ -4,42 +4,21 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
 
-const motivosNoConfirmacion = [
-  "Pago no registrado",
-  "Pedido de cancelación del turno",
-  "Pedido de reprogramación de turno",
-  "Problemas de la organización interna",
-];
-
 const sedes = [
   "Sede Cipolletti",
   "Sede Neuquén",
   "Sede Plaza Huincul",
 ];
 
-const estados = ["Todos", "Pendiente", "Confirmado", "No Confirmado"];
+const estados = [
+  "Todos",
+  "Pendiente",
+  "Confirmado",
+  "No Confirmado",
+];
 
-function formatearFecha(fecha) {
-  return fecha.toISOString().split("T")[0];
-}
-
-function obtenerSemanaActual() {
-  const hoy = new Date();
-  const dia = hoy.getDay();
-  const diferenciaLunes = dia === 0 ? -6 : 1 - dia;
-
-  const lunes = new Date(hoy);
-  lunes.setDate(hoy.getDate() + diferenciaLunes);
-  lunes.setHours(0, 0, 0, 0);
-
-  const domingo = new Date(lunes);
-  domingo.setDate(lunes.getDate() + 6);
-  domingo.setHours(23, 59, 59, 999);
-
-  return {
-    inicio: formatearFecha(lunes),
-    fin: formatearFecha(domingo),
-  };
+function hoyISO() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function badgeEstado(estado) {
@@ -54,12 +33,8 @@ function badgeEstado(estado) {
   return "bg-amber-100 text-amber-800";
 }
 
-function crearLinkWhatsapp(turno) {
-  const celular = turno.celular || "";
-
-  const mensaje = `Hola ${turno.nombre}, te contactamos de Laboral Salud por tu turno del día ${turno.fecha} a las ${turno.horario} en ${turno.locacion}.`;
-
-  return `https://wa.me/54${celular}?text=${encodeURIComponent(mensaje)}`;
+function textoSeguro(valor) {
+  return valor || "-";
 }
 
 export default function AdminPage() {
@@ -67,20 +42,13 @@ export default function AdminPage() {
 
   const [turnos, setTurnos] = useState([]);
   const [cargando, setCargando] = useState(false);
+  const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState("");
-  const [motivos, setMotivos] = useState({});
 
+  const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("Todos");
   const [filtroSede, setFiltroSede] = useState("Todas");
   const [filtroFecha, setFiltroFecha] = useState("");
-  const [busqueda, setBusqueda] = useState("");
-
-  const [sedeImpresion, setSedeImpresion] = useState("Sede Cipolletti");
-  const [fechaImpresion, setFechaImpresion] = useState(
-    formatearFecha(new Date())
-  );
-
-  const semanaActual = obtenerSemanaActual();
 
   const cargarTurnos = async () => {
     setCargando(true);
@@ -103,55 +71,8 @@ export default function AdminPage() {
     setTurnos(data || []);
   };
 
-  const confirmarTurno = async (id) => {
-    const { error } = await supabase
-      .from("turnos")
-      .update({
-        estado: "Confirmado",
-        motivo_no_confirmacion: null,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("No se pudo confirmar el turno.");
-      return;
-    }
-
-    cargarTurnos();
-  };
-
-  const noConfirmarTurno = async (id) => {
-    const motivo = motivos[id];
-
-    if (!motivo) {
-      alert("Seleccione un motivo para no confirmar el turno.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("turnos")
-      .update({
-        estado: "No Confirmado",
-        motivo_no_confirmacion: motivo,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("No se pudo no confirmar el turno.");
-      return;
-    }
-
-    cargarTurnos();
-  };
-
-  const imprimirListado = () => {
-    window.print();
-  };
-
   useEffect(() => {
-    const verificarSesion = async () => {
+    const iniciar = async () => {
       const { data } = await supabase.auth.getSession();
 
       if (!data.session) {
@@ -162,340 +83,343 @@ export default function AdminPage() {
       cargarTurnos();
     };
 
-    verificarSesion();
+    iniciar();
   }, [router]);
 
-  const turnosSemanaActual = useMemo(() => {
-    return turnos.filter(
-      (turno) =>
-        turno.fecha >= semanaActual.inicio && turno.fecha <= semanaActual.fin
-    );
-  }, [turnos, semanaActual.inicio, semanaActual.fin]);
+  const confirmarTurno = async (id) => {
+    const { error } = await supabase
+      .from("turnos")
+      .update({
+        estado: "Confirmado",
+        whatsapp_confirmacion_simulado: true,
+      })
+      .eq("id", id);
 
-  const reportes = useMemo(() => {
-    const total = turnosSemanaActual.length;
+    if (error) {
+      alert("No se pudo confirmar.");
+      return;
+    }
 
-    const pendientes = turnosSemanaActual.filter(
+    cargarTurnos();
+  };
+
+  const noConfirmarTurno = async (id) => {
+    const { error } = await supabase
+      .from("turnos")
+      .update({
+        estado: "No Confirmado",
+      })
+      .eq("id", id);
+
+    if (error) {
+      alert("No se pudo actualizar.");
+      return;
+    }
+
+    cargarTurnos();
+  };
+
+  const ejecutarRecordatorios = async () => {
+    setProcesando(true);
+
+    const hoy = new Date();
+    const ms24 = 24 * 60 * 60 * 1000;
+    const ms2 = 2 * 60 * 60 * 1000;
+
+    for (const turno of turnos) {
+      if (turno.estado !== "Confirmado") continue;
+
+      const fechaHora = new Date(`${turno.fecha}T${turno.horario}:00`);
+      const diferencia = fechaHora - hoy;
+
+      if (
+        diferencia <= ms24 &&
+        diferencia > ms2 &&
+        !turno.recordatorio_24h_simulado
+      ) {
+        await supabase
+          .from("turnos")
+          .update({
+            recordatorio_24h_simulado: true,
+          })
+          .eq("id", turno.id);
+      }
+
+      if (
+        diferencia <= ms2 &&
+        diferencia > 0 &&
+        !turno.recordatorio_2h_simulado
+      ) {
+        await supabase
+          .from("turnos")
+          .update({
+            recordatorio_2h_simulado: true,
+          })
+          .eq("id", turno.id);
+      }
+    }
+
+    setProcesando(false);
+    cargarTurnos();
+    alert("Recordatorios simulados ejecutados.");
+  };
+
+  const liberarPendientes = async () => {
+    setProcesando(true);
+
+    const ahora = new Date();
+
+    for (const turno of turnos) {
+      if (turno.estado !== "Pendiente") continue;
+      if (!turno.created_at) continue;
+
+      const creado = new Date(turno.created_at);
+      const minutos = (ahora - creado) / 1000 / 60;
+
+      if (minutos >= 60) {
+        await supabase
+          .from("turnos")
+          .update({
+            estado: "No Confirmado",
+            vencido_automaticamente: true,
+            motivo_no_confirmacion:
+              "Pre-reserva vencida automáticamente",
+          })
+          .eq("id", turno.id);
+      }
+    }
+
+    setProcesando(false);
+    cargarTurnos();
+    alert("Pendientes vencidos liberados.");
+  };
+
+  const marcarAusente = async (id) => {
+    await supabase
+      .from("turnos")
+      .update({
+        ausente: true,
+      })
+      .eq("id", id);
+
+    cargarTurnos();
+  };
+
+  const turnosFiltrados = useMemo(() => {
+    return turnos.filter((t) => {
+      const coincideEstado =
+        filtroEstado === "Todos" || t.estado === filtroEstado;
+
+      const coincideSede =
+        filtroSede === "Todas" || t.locacion === filtroSede;
+
+      const coincideFecha =
+        !filtroFecha || t.fecha === filtroFecha;
+
+      const texto = `${t.nombre || ""} ${t.dni || ""} ${t.celular || ""
+        }`.toLowerCase();
+
+      const coincideBusqueda = texto.includes(
+        busqueda.toLowerCase()
+      );
+
+      return (
+        coincideEstado &&
+        coincideSede &&
+        coincideFecha &&
+        coincideBusqueda
+      );
+    });
+  }, [
+    turnos,
+    filtroEstado,
+    filtroSede,
+    filtroFecha,
+    busqueda,
+  ]);
+
+  const metricas = useMemo(() => {
+    const total = turnos.length;
+    const pendientes = turnos.filter(
       (t) => t.estado === "Pendiente"
     ).length;
 
-    const confirmados = turnosSemanaActual.filter(
+    const confirmados = turnos.filter(
       (t) => t.estado === "Confirmado"
     ).length;
 
-    const noConfirmados = turnosSemanaActual.filter(
+    const noConfirmados = turnos.filter(
       (t) => t.estado === "No Confirmado"
     ).length;
 
-    const porSede = turnosSemanaActual.reduce((acc, turno) => {
-      acc[turno.locacion] = (acc[turno.locacion] || 0) + 1;
-      return acc;
-    }, {});
+    const ausentes = turnos.filter((t) => t.ausente).length;
+
+    const record24 = turnos.filter(
+      (t) => t.recordatorio_24h_simulado
+    ).length;
+
+    const record2 = turnos.filter(
+      (t) => t.recordatorio_2h_simulado
+    ).length;
+
+    const vencidos = turnos.filter(
+      (t) => t.vencido_automaticamente
+    ).length;
 
     return {
       total,
       pendientes,
       confirmados,
       noConfirmados,
-      porSede,
+      ausentes,
+      record24,
+      record2,
+      vencidos,
     };
-  }, [turnosSemanaActual]);
-
-  const turnosFiltrados = useMemo(() => {
-    return turnos.filter((turno) => {
-      const coincideEstado =
-        filtroEstado === "Todos" || turno.estado === filtroEstado;
-
-      const coincideSede =
-        filtroSede === "Todas" || turno.locacion === filtroSede;
-
-      const coincideFecha = !filtroFecha || turno.fecha === filtroFecha;
-
-      const textoBusqueda = `${turno.nombre || ""} ${turno.dni || ""} ${turno.celular || ""
-        }`.toLowerCase();
-
-      const coincideBusqueda = textoBusqueda.includes(busqueda.toLowerCase());
-
-      return (
-        coincideEstado && coincideSede && coincideFecha && coincideBusqueda
-      );
-    });
-  }, [turnos, filtroEstado, filtroSede, filtroFecha, busqueda]);
-
-  const turnosPendientes = turnos.filter((t) => t.estado === "Pendiente");
-
-  const turnosParaImprimir = turnos.filter(
-    (turno) =>
-      turno.estado === "Confirmado" &&
-      turno.locacion === sedeImpresion &&
-      turno.fecha === fechaImpresion
-  );
+  }, [turnos]);
 
   return (
     <main className="min-h-screen bg-slate-100 p-6">
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-
-          #area-impresion,
-          #area-impresion * {
-            visibility: visible;
-          }
-
-          #area-impresion {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            background: white;
-            padding: 24px;
-          }
-
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
-
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="bg-white rounded-2xl p-6 shadow no-print">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <img
-                src="/logo.png"
-                alt="Laboral Salud"
-                className="h-16 object-contain"
-              />
-
-              <div>
-                <h1 className="text-3xl font-bold text-slate-800">
-                  Panel de Recepción
-                </h1>
-
-                <p className="text-slate-500">
-                  Laboral Salud · Gestión operativa de turnos
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                router.push("/admin/login");
-              }}
-              className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-5 py-3"
-            >
-              Cerrar sesión
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow no-print">
-          <h2 className="text-xl font-semibold">
-            Resumen operativo - Semana actual
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Semana actual: <strong>{semanaActual.inicio}</strong> al{" "}
-            <strong>{semanaActual.fin}</strong>
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-4 no-print">
-          <div className="bg-white rounded-2xl p-5 shadow">
-            <p className="text-sm text-slate-500">Total reservas</p>
-            <p className="text-xs text-slate-400 mb-2">Semana actual</p>
-            <p className="text-3xl font-bold">{reportes.total}</p>
-          </div>
-
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow">
-            <p className="text-sm text-amber-700">Pendientes</p>
-            <p className="text-xs text-amber-600 mb-2">Semana actual</p>
-            <p className="text-3xl font-bold text-amber-800">
-              {reportes.pendientes}
-            </p>
-          </div>
-
-          <div className="bg-green-50 border border-green-200 rounded-2xl p-5 shadow">
-            <p className="text-sm text-green-700">Confirmados</p>
-            <p className="text-xs text-green-600 mb-2">Semana actual</p>
-            <p className="text-3xl font-bold text-green-800">
-              {reportes.confirmados}
-            </p>
-          </div>
-
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 shadow">
-            <p className="text-sm text-red-700">No confirmados</p>
-            <p className="text-xs text-red-600 mb-2">Semana actual</p>
-            <p className="text-3xl font-bold text-red-800">
-              {reportes.noConfirmados}
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow no-print">
-          <h2 className="text-xl font-semibold mb-1">
-            Reservas por sede - Semana actual
-          </h2>
-
-          <p className="text-sm text-slate-500 mb-4">
-            Incluye reservas con fecha entre {semanaActual.inicio} y{" "}
-            {semanaActual.fin}.
-          </p>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            {sedes.map((sede) => (
-              <div key={sede} className="border rounded-xl p-4">
-                <p className="text-sm text-slate-500">{sede}</p>
-                <p className="text-2xl font-bold">
-                  {reportes.porSede[sede] || 0}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow no-print">
-          <h2 className="text-xl font-semibold mb-4">
-            Listado diario para imprimir
-          </h2>
-
-          <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+        <div className="bg-white rounded-2xl p-6 shadow">
+          <div className="flex flex-col md:flex-row md:justify-between gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Sede</label>
-
-              <select
-                className="w-full border rounded-xl p-3 bg-white"
-                value={sedeImpresion}
-                onChange={(e) => setSedeImpresion(e.target.value)}
-              >
-                {sedes.map((sede) => (
-                  <option key={sede} value={sede}>
-                    {sede}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Fecha</label>
-
-              <input
-                type="date"
-                className="w-full border rounded-xl p-3"
-                value={fechaImpresion}
-                onChange={(e) => setFechaImpresion(e.target.value)}
-              />
-            </div>
-
-            <button
-              onClick={imprimirListado}
-              className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl px-5 py-3"
-            >
-              Imprimir listado
-            </button>
-          </div>
-        </div>
-
-        <div id="area-impresion" className="bg-white rounded-2xl p-6 shadow">
-          <h2 className="text-2xl font-bold mb-2">
-            Listado diario de turnos confirmados
-          </h2>
-
-          <p className="text-sm mb-1">
-            <strong>Sede:</strong> {sedeImpresion}
-          </p>
-
-          <p className="text-sm mb-6">
-            <strong>Fecha:</strong> {fechaImpresion}
-          </p>
-
-          {turnosParaImprimir.length === 0 ? (
-            <p className="text-sm text-slate-500">
-              No hay turnos confirmados para la sede y fecha seleccionadas.
-            </p>
-          ) : (
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="border-b bg-slate-100 text-left">
-                  <th className="p-3 border">Hora</th>
-                  <th className="p-3 border">Paciente</th>
-                  <th className="p-3 border">DNI</th>
-                  <th className="p-3 border">Celular</th>
-                  <th className="p-3 border">+65?</th>
-                  <th className="p-3 border">Laboratorio anterior?</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {turnosParaImprimir.map((turno) => (
-                  <tr key={turno.id} className="border-b">
-                    <td className="p-3 border font-semibold">
-                      {turno.horario}
-                    </td>
-                    <td className="p-3 border">{turno.nombre}</td>
-                    <td className="p-3 border">{turno.dni}</td>
-                    <td className="p-3 border">{turno.celular || "-"}</td>
-                    <td className="p-3 border">{turno.mayor65 || "-"}</td>
-                    <td className="p-3 border">
-                      {turno.laboratorio_reciente || "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 shadow no-print">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-xl font-semibold">Gestión de turnos</h2>
-              <p className="text-sm text-slate-500">
-                Buscá, filtrá, confirmá o no confirmá reservas.
+              <h1 className="text-3xl font-bold">
+                Panel Administrativo
+              </h1>
+              <p className="text-slate-500">
+                turnos-medicos-beta
               </p>
             </div>
 
-            <button
-              onClick={cargarTurnos}
-              className="border rounded-xl px-4 py-2 text-sm"
-            >
-              Actualizar
-            </button>
+            <div className="flex gap-3 flex-wrap">
+              <button
+                onClick={cargarTurnos}
+                className="border rounded-xl px-4 py-2"
+              >
+                Actualizar
+              </button>
+
+              <button
+                onClick={ejecutarRecordatorios}
+                disabled={procesando}
+                className="bg-blue-600 text-white rounded-xl px-4 py-2"
+              >
+                Ejecutar recordatorios
+              </button>
+
+              <button
+                onClick={liberarPendientes}
+                disabled={procesando}
+                className="bg-red-600 text-white rounded-xl px-4 py-2"
+              >
+                Liberar vencidos
+              </button>
+
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  router.push("/admin/login");
+                }}
+                className="bg-orange-500 text-white rounded-xl px-4 py-2"
+              >
+                Salir
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <p className="text-sm text-slate-500">Total</p>
+            <p className="text-3xl font-bold">{metricas.total}</p>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-4 mb-5">
+          <div className="bg-amber-50 rounded-2xl p-4 shadow">
+            <p className="text-sm">Pendientes</p>
+            <p className="text-3xl font-bold">
+              {metricas.pendientes}
+            </p>
+          </div>
+
+          <div className="bg-green-50 rounded-2xl p-4 shadow">
+            <p className="text-sm">Confirmados</p>
+            <p className="text-3xl font-bold">
+              {metricas.confirmados}
+            </p>
+          </div>
+
+          <div className="bg-red-50 rounded-2xl p-4 shadow">
+            <p className="text-sm">No confirmados</p>
+            <p className="text-3xl font-bold">
+              {metricas.noConfirmados}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <p className="text-sm">Ausentes</p>
+            <p className="text-2xl font-bold">
+              {metricas.ausentes}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <p className="text-sm">Recordatorio 24h</p>
+            <p className="text-2xl font-bold">
+              {metricas.record24}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <p className="text-sm">Recordatorio 2h</p>
+            <p className="text-2xl font-bold">
+              {metricas.record2}
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow">
+            <p className="text-sm">Pendientes vencidos</p>
+            <p className="text-2xl font-bold">
+              {metricas.vencidos}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 shadow">
+          <div className="grid md:grid-cols-4 gap-3">
             <input
               className="border rounded-xl p-3"
-              placeholder="Buscar por nombre, DNI o celular"
+              placeholder="Buscar"
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={(e) =>
+                setBusqueda(e.target.value)
+              }
             />
 
             <select
-              className="border rounded-xl p-3 bg-white"
+              className="border rounded-xl p-3"
               value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
+              onChange={(e) =>
+                setFiltroEstado(e.target.value)
+              }
             >
-              {estados.map((estado) => (
-                <option key={estado} value={estado}>
-                  {estado}
-                </option>
+              {estados.map((e) => (
+                <option key={e}>{e}</option>
               ))}
             </select>
 
             <select
-              className="border rounded-xl p-3 bg-white"
+              className="border rounded-xl p-3"
               value={filtroSede}
-              onChange={(e) => setFiltroSede(e.target.value)}
+              onChange={(e) =>
+                setFiltroSede(e.target.value)
+              }
             >
-              <option value="Todas">Todas las sedes</option>
-              {sedes.map((sede) => (
-                <option key={sede} value={sede}>
-                  {sede}
-                </option>
+              <option>Todas</option>
+              {sedes.map((s) => (
+                <option key={s}>{s}</option>
               ))}
             </select>
 
@@ -503,130 +427,88 @@ export default function AdminPage() {
               type="date"
               className="border rounded-xl p-3"
               value={filtroFecha}
-              onChange={(e) => setFiltroFecha(e.target.value)}
+              onChange={(e) =>
+                setFiltroFecha(e.target.value)
+              }
             />
           </div>
+        </div>
 
-          <div className="mb-4 text-sm text-slate-500">
-            Pendientes actuales: <strong>{turnosPendientes.length}</strong> ·
-            Resultados filtrados: <strong>{turnosFiltrados.length}</strong>
-          </div>
+        <div className="bg-white rounded-2xl p-6 shadow overflow-x-auto">
+          {cargando && <p>Cargando...</p>}
+          {error && <p>{error}</p>}
 
-          {cargando && (
-            <p className="text-slate-500 text-sm">Cargando turnos...</p>
-          )}
+          {!cargando && (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-slate-50 text-left">
+                  <th className="p-3">Fecha</th>
+                  <th className="p-3">Hora</th>
+                  <th className="p-3">Paciente</th>
+                  <th className="p-3">Celular</th>
+                  <th className="p-3">Sede</th>
+                  <th className="p-3">Estado</th>
+                  <th className="p-3">Acciones</th>
+                </tr>
+              </thead>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm mb-4">
-              {error}
-            </div>
-          )}
+              <tbody>
+                {turnosFiltrados.map((t) => (
+                  <tr key={t.id} className="border-b">
+                    <td className="p-3">{t.fecha}</td>
+                    <td className="p-3 font-semibold">
+                      {t.horario}
+                    </td>
+                    <td className="p-3">{t.nombre}</td>
+                    <td className="p-3">
+                      {textoSeguro(t.celular)}
+                    </td>
+                    <td className="p-3">{t.locacion}</td>
 
-          {!cargando && turnosFiltrados.length === 0 && (
-            <p className="text-slate-500 text-sm">
-              No hay turnos para los filtros seleccionados.
-            </p>
-          )}
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${badgeEstado(
+                          t.estado
+                        )}`}
+                      >
+                        {t.estado}
+                      </span>
+                    </td>
 
-          {turnosFiltrados.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b bg-slate-50 text-left">
-                    <th className="p-3">Fecha</th>
-                    <th className="p-3">Hora</th>
-                    <th className="p-3">Sede</th>
-                    <th className="p-3">Paciente</th>
-                    <th className="p-3">DNI</th>
-                    <th className="p-3">Celular</th>
-                    <th className="p-3">Estado</th>
-                    <th className="p-3">Motivo</th>
-                    <th className="p-3">Acciones</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {turnosFiltrados.map((turno) => (
-                    <tr key={turno.id} className="border-b align-top">
-                      <td className="p-3">{turno.fecha}</td>
-                      <td className="p-3 font-semibold">{turno.horario}</td>
-                      <td className="p-3">{turno.locacion}</td>
-                      <td className="p-3">{turno.nombre}</td>
-                      <td className="p-3">{turno.dni}</td>
-                      <td className="p-3">{turno.celular || "-"}</td>
-
-                      <td className="p-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeEstado(
-                            turno.estado
-                          )}`}
+                    <td className="p-3">
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() =>
+                            confirmarTurno(t.id)
+                          }
+                          className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs"
                         >
-                          {turno.estado || "Pendiente"}
-                        </span>
-                      </td>
+                          Confirmar
+                        </button>
 
-                      <td className="p-3 min-w-[220px]">
-                        {turno.estado === "No Confirmado" ? (
-                          <span className="text-xs text-slate-600">
-                            {turno.motivo_no_confirmacion || "-"}
-                          </span>
-                        ) : (
-                          <select
-                            className="w-full border rounded-xl p-2 bg-white text-xs"
-                            value={motivos[turno.id] || ""}
-                            onChange={(e) =>
-                              setMotivos({
-                                ...motivos,
-                                [turno.id]: e.target.value,
-                              })
-                            }
-                          >
-                            <option value="">Motivo para no confirmar</option>
+                        <button
+                          onClick={() =>
+                            noConfirmarTurno(t.id)
+                          }
+                          className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs"
+                        >
+                          No confirmar
+                        </button>
 
-                            {motivosNoConfirmacion.map((motivo) => (
-                              <option key={motivo} value={motivo}>
-                                {motivo}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </td>
-
-                      <td className="p-3 min-w-[330px]">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => confirmarTurno(turno.id)}
-                            disabled={turno.estado === "Confirmado"}
-                            className="bg-green-700 text-white rounded-xl px-3 py-2 text-xs disabled:bg-slate-300"
-                          >
-                            Confirmar
-                          </button>
-
-                          <button
-                            onClick={() => noConfirmarTurno(turno.id)}
-                            disabled={turno.estado === "No Confirmado"}
-                            className="bg-red-700 text-white rounded-xl px-3 py-2 text-xs disabled:bg-slate-300"
-                          >
-                            No confirmar
-                          </button>
-
-                          {turno.celular && (
-                            <a
-                              href={crearLinkWhatsapp(turno)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="bg-emerald-600 text-white rounded-xl px-3 py-2 text-xs"
-                            >
-                              WhatsApp
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <button
+                          onClick={() =>
+                            marcarAusente(t.id)
+                          }
+                          className="bg-slate-700 text-white px-3 py-2 rounded-xl text-xs"
+                        >
+                          Ausente
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
