@@ -262,10 +262,19 @@ export default function AdminPage() {
     <main className="min-h-screen bg-slate-100 p-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="bg-white rounded-2xl p-6 shadow">
-          <div className="flex flex-col md:flex-row md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold">Panel Administrativo</h1>
-              <p className="text-slate-500">Gestión de pagos y turnos</p>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+
+            <div className="flex items-center gap-4">
+              <img
+                src="/logo.png"
+                alt="Laboral Salud"
+                className="h-16 object-contain"
+              />
+
+              <div>
+                <h1 className="text-3xl font-bold">Panel Administrativo</h1>
+                <p className="text-slate-500">Gestión de pagos y turnos</p>
+              </div>
             </div>
 
             <div className="flex gap-3 flex-wrap">
@@ -299,6 +308,7 @@ export default function AdminPage() {
                 Salir
               </button>
             </div>
+
           </div>
         </div>
 
