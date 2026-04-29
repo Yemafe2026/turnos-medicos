@@ -118,24 +118,6 @@ export default function AdminPage() {
     cargarTurnos();
   };
 
-  const confirmarTurno = async (id) => {
-    const { error } = await supabase
-      .from("turnos")
-      .update({
-        estado: "Confirmado",
-        pagado: true,
-        pago_confirmado_at: new Date().toISOString(),
-        whatsapp_confirmacion_simulado: true,
-      })
-      .eq("id", id);
-
-    if (error) {
-      alert("No se pudo confirmar el turno.");
-      return;
-    }
-
-    cargarTurnos();
-  };
 
   const noConfirmarTurno = async (id, motivo = "No confirmado manualmente") => {
     const { error } = await supabase
@@ -477,15 +459,7 @@ export default function AdminPage() {
                             disabled={t.pagado || t.estado === "No Confirmado"}
                             className="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300"
                           >
-                            Confirmar pago
-                          </button>
-
-                          <button
-                            onClick={() => confirmarTurno(t.id)}
-                            disabled={t.estado === "Confirmado"}
-                            className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300"
-                          >
-                            Confirmar turno
+                            Confirmar pago y turno
                           </button>
 
                           <button
