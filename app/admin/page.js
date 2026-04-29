@@ -9,7 +9,6 @@ const sedes = ["Sede Cipolletti", "Sede Neuquén", "Sede Plaza Huincul"];
 const estados = [
   "Todos",
   "Pendiente de pago",
-  "Pagado",
   "Confirmado",
   "No Confirmado",
   "Ausente",
@@ -106,7 +105,8 @@ export default function AdminPage() {
       .update({
         pagado: true,
         pago_confirmado_at: new Date().toISOString(),
-        estado: "Pagado",
+        estado: "Confirmado",
+        whatsapp_confirmacion_simulado: true,
       })
       .eq("id", id);
 
