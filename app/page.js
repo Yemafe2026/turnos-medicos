@@ -10,9 +10,33 @@ const locaciones = [
 ];
 
 const direccionesLaboratorio = {
-  "Sede Cipolletti": "Dirección de laboratorio a confirmar - Cipolletti",
-  "Sede Neuquén": "Dirección de laboratorio a confirmar - Neuquén",
-  "Sede Plaza Huincul": "Dirección de laboratorio a confirmar - Plaza Huincul",
+  "Sede Cipolletti": "DIRECCION_LABORATORIO_CIPOLLETTI_A_DEFINIR",
+  "Sede Neuquén": "DIRECCION_LABORATORIO_NEUQUEN_A_DEFINIR",
+  "Sede Plaza Huincul": "DIRECCION_LABORATORIO_PLAZAHUINCUL_A_DEFINIR",
+};
+
+const direccionesCentroMedico = {
+  "Sede Cipolletti": "DIRECCION_CENTRO_MEDICO_CIPOLLETTI_A_DEFINIR",
+  "Sede Neuquén": "DIRECCION_CENTRO_MEDICO_NEUQUEN_A_DEFINIR",
+  "Sede Plaza Huincul": "DIRECCION_CENTRO_MEDICO_PLAZAHUINCUL_A_DEFINIR",
+};
+
+const datosPagoPorLocacion = {
+  "Sede Cipolletti": {
+    alias: "ALIAS_CIPOLLETTI_A_DEFINIR",
+    titular: "TITULAR_CIPOLLETTI_A_DEFINIR",
+    linkMercadoPago: "LINK_MP_CIPOLLETTI_A_DEFINIR",
+  },
+  "Sede Neuquén": {
+    alias: "ALIAS_NEUQUEN_A_DEFINIR",
+    titular: "TITULAR_NEUQUEN_A_DEFINIR",
+    linkMercadoPago: "LINK_MP_NEUQUEN_A_DEFINIR",
+  },
+  "Sede Plaza Huincul": {
+    alias: "ALIAS_PLAZAHUINCUL_A_DEFINIR",
+    titular: "TITULAR_PLAZAHUINCUL_A_DEFINIR",
+    linkMercadoPago: "LINK_MP_PLAZAHUINCUL_A_DEFINIR",
+  },
 };
 
 const horarios = [
@@ -25,9 +49,46 @@ const horarios = [
   "14:00",
 ];
 
-const normalizarCelular = (valor) => {
+const metodosPagoBase = ["Mercado Pago", "Transferencia"];
+
+function normalizarCelular(valor) {
   return valor.replace(/\D/g, "");
-};
+}
+
+function obtenerFechaHoraTurno(fecha, horario) {
+  return new Date(`${fecha}T${horario}:00`);
+}
+
+function faltanMasDe24Horas(fecha, horario) {
+  const fechaTurno = obtenerFechaHoraTurno(fecha, horario);
+  const ahora = new Date();
+  const diferenciaHoras = (fechaTurno - ahora) / 1000 / 60 / 60;
+  return diferenciaHoras > 24;
+}
+
+function calcularVencimientoPago(fecha, horario) {
+  const ahora = new Date();
+  const fechaTurno = obtenerFechaHoraTurno(fecha, horario);
+
+  if (faltanMasDe24Horas(fecha, horario)) {
+    const vencimiento = new Date(fechaTurno);
+    vencimiento.setHours(vencimiento.getHours() - 24);
+    return vencimiento.toISOString();
+  }
+
+  const vencimiento = new Date(ahora);
+  vencimiento.setMinutes(vencimiento.getMinutes() + 60);
+  return vencimiento.toISOString();
+}
+
+function formatearFechaHora(fechaISO) {
+  if (!fechaISO) return "-";
+  const fecha = new Date(fechaISO);
+  return fecha.toLocaleString("es-AR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
 
 export default function Home() {
   const [paso, setPaso] = useState(1);
@@ -45,16 +106,21 @@ export default function Home() {
     locacion: "",
     fecha: "",
     horario: "",
+    metodoPago: "",
   });
 
-  const formularioPaso1Completo =
-    form.nombre.trim() &&
-    form.dni.trim() &&
-    form.celular.trim() &&
-    form.mayor65 &&
-    form.tieneLaboratorioReciente &&
-    form.locacion &&
-    form.fecha;
+  const datosPago = datosPagoPorLocacion[form.locacion];
+  const permiteEfectivo =
+    form.fecha && form.horario && faltanMasDe24Horas(form.fecha, form.horario);
+
+  const metodosPagoDisponibles = permiteEfectivo
+    ? [...metodosPagoBase, "Efectivo en sucursal"]
+    : metodosPagoBase;
+
+  const vencimientoPago =
+    form.fecha && form.horario
+      ? calcularVencimientoPago(form.fecha, form.horario)
+      : "";
 
   const cargarTurnosExistentes = async () => {
     if (!form.locacion || !form.fecha) return;
@@ -86,7 +152,15 @@ export default function Home() {
   }, [paso, form.locacion, form.fecha]);
 
   const estadoHorario = (hora) => {
-    const turno = turnosExistentes.find((t) => t.horario === hora);
+    const turno = turnosExistentes.find((t) => {
+      const estado = t.estado || "";
+      const estaLiberado =
+        estado === "No Confirmado" ||
+        estado === "Cancelado" ||
+        estado === "Ausente";
+
+      return t.horario === hora && !estaLiberado;
+    });
 
     if (!turno) {
       return {
@@ -98,23 +172,15 @@ export default function Home() {
 
     if (turno.estado === "Confirmado") {
       return {
-        texto: "Reserva confirmada",
+        texto: "Confirmado",
         bloqueado: true,
         clases:
           "bg-green-100 text-green-800 border-green-300 cursor-not-allowed",
       };
     }
 
-    if (turno.estado === "Cancelado") {
-      return {
-        texto: "Disponible",
-        bloqueado: false,
-        clases: "bg-white hover:border-orange-500 hover:bg-orange-50",
-      };
-    }
-
     return {
-      texto: "Pre-reserva activa",
+      texto: "Reservado",
       bloqueado: true,
       clases:
         "bg-amber-100 text-amber-800 border-amber-300 cursor-not-allowed",
@@ -124,12 +190,20 @@ export default function Home() {
   const avanzarAPaso2 = () => {
     setError("");
 
-    const celularLimpio = normalizarCelular(form.celular);
-
-    if (!formularioPaso1Completo) {
+    if (
+      !form.nombre.trim() ||
+      !form.dni.trim() ||
+      !form.celular.trim() ||
+      !form.mayor65 ||
+      !form.tieneLaboratorioReciente ||
+      !form.locacion ||
+      !form.fecha
+    ) {
       setError("Complete todos los datos antes de continuar.");
       return;
     }
+
+    const celularLimpio = normalizarCelular(form.celular);
 
     if (celularLimpio.length < 8) {
       setError("Ingrese un número de celular válido.");
@@ -147,15 +221,23 @@ export default function Home() {
   };
 
   const generarPreReserva = async () => {
+    setError("");
+
     if (!form.horario) {
       setError("Seleccione un horario disponible.");
       return;
     }
 
-    setCargando(true);
-    setError("");
+    if (!form.metodoPago) {
+      setError("Seleccione un método de pago.");
+      return;
+    }
 
     const celularLimpio = normalizarCelular(form.celular);
+    const pago = datosPagoPorLocacion[form.locacion];
+    const vencimiento = calcularVencimientoPago(form.fecha, form.horario);
+
+    setCargando(true);
 
     const { error } = await supabase.from("turnos").insert([
       {
@@ -167,7 +249,13 @@ export default function Home() {
         locacion: form.locacion,
         fecha: form.fecha,
         horario: form.horario,
-        estado: "Pendiente",
+        estado: "Pendiente de pago",
+        pagado: false,
+        metodo_pago: form.metodoPago,
+        vencimiento_pago_at: vencimiento,
+        link_pago: pago?.linkMercadoPago || "",
+        qr_pago: "QR_SIMULADO_" + form.locacion.toUpperCase().replaceAll(" ", "_"),
+        whatsapp_prereserva_simulado: true,
       },
     ]);
 
@@ -200,439 +288,448 @@ export default function Home() {
       locacion: "",
       fecha: "",
       horario: "",
+      metodoPago: "",
     });
   };
 
   return (
     <main className="min-h-screen bg-slate-100 p-6">
-      <div className="mx-auto max-w-3xl">
-        <section className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 shadow">
-            <div className="text-center space-y-4">
-              <img
-                src="/logo.png"
-                alt="Laboral Salud"
-                className="h-24 mx-auto object-contain"
-              />
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="bg-white rounded-2xl p-6 shadow text-center space-y-4">
+          <img
+            src="/logo.png"
+            alt="Laboral Salud"
+            className="h-24 mx-auto object-contain"
+          />
 
-              <h1 className="text-3xl font-bold text-slate-800">
-                Gestión de Turnos Médicos
-              </h1>
+          <h1 className="text-3xl font-bold text-slate-800">
+            Gestión de Turnos Médicos
+          </h1>
 
-              <p className="text-slate-600">
-                Sistema de pre-reserva para certificaciones médicas laborales.
+          <p className="text-slate-600">
+            Sistema de pre-reserva médica laboral
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
+            {error}
+          </div>
+        )}
+
+        {paso === 1 && (
+          <div className="bg-white rounded-2xl p-6 shadow space-y-4">
+            <h2 className="text-xl font-semibold">Datos del paciente</h2>
+
+            <input
+              className="w-full border rounded-xl p-3"
+              placeholder="Nombre y apellido"
+              value={form.nombre}
+              onChange={(e) =>
+                setForm({ ...form, nombre: e.target.value })
+              }
+            />
+
+            <input
+              className="w-full border rounded-xl p-3"
+              placeholder="DNI"
+              value={form.dni}
+              onChange={(e) =>
+                setForm({ ...form, dni: e.target.value.replace(/\D/g, "") })
+              }
+            />
+
+            <input
+              className="w-full border rounded-xl p-3"
+              placeholder="Celular"
+              value={form.celular}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  celular: normalizarCelular(e.target.value),
+                })
+              }
+            />
+
+            <select
+              className="w-full border rounded-xl p-3 bg-white"
+              value={form.mayor65}
+              onChange={(e) =>
+                setForm({ ...form, mayor65: e.target.value })
+              }
+            >
+              <option value="">¿Tiene 65 años o más?</option>
+              <option value="Sí">Sí</option>
+              <option value="No">No</option>
+            </select>
+
+            <select
+              className="w-full border rounded-xl p-3 bg-white"
+              value={form.tieneLaboratorioReciente}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  tieneLaboratorioReciente: e.target.value,
+                })
+              }
+            >
+              <option value="">¿Tiene laboratorio reciente?</option>
+              <option value="Sí">Sí</option>
+              <option value="No">No</option>
+            </select>
+
+            <select
+              className="w-full border rounded-xl p-3 bg-white"
+              value={form.locacion}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  locacion: e.target.value,
+                  horario: "",
+                  metodoPago: "",
+                })
+              }
+            >
+              <option value="">Seleccione sede</option>
+              {locaciones.map((l) => (
+                <option key={l} value={l}>
+                  {l}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              className="w-full border rounded-xl p-3"
+              value={form.fecha}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  fecha: e.target.value,
+                  horario: "",
+                  metodoPago: "",
+                })
+              }
+            />
+
+            <button
+              onClick={avanzarAPaso2}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3"
+            >
+              Continuar
+            </button>
+          </div>
+        )}
+
+        {paso === 2 && (
+          <div className="bg-white rounded-2xl p-6 shadow space-y-4">
+            <h2 className="text-xl font-semibold">Elegir horario</h2>
+
+            <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+              <p>
+                <strong>Sede:</strong> {form.locacion}
+              </p>
+              <p>
+                <strong>Fecha:</strong> {form.fecha}
               </p>
             </div>
-          </div>
 
-          <div className="bg-white rounded-2xl p-4 shadow">
-            <div className="grid grid-cols-3 gap-2 text-center text-sm">
-              <div
-                className={`rounded-xl p-2 ${paso === 1
-                  ? "bg-orange-500 text-white"
-                  : "bg-slate-100 text-slate-600"
-                  }`}
-              >
-                1. Datos
-              </div>
-              <div
-                className={`rounded-xl p-2 ${paso === 2
-                  ? "bg-orange-500 text-white"
-                  : "bg-slate-100 text-slate-600"
-                  }`}
-              >
-                2. Horario
-              </div>
-              <div
-                className={`rounded-xl p-2 ${paso === 3
-                  ? "bg-orange-500 text-white"
-                  : "bg-slate-100 text-slate-600"
-                  }`}
-              >
-                3. Pre-reserva
-              </div>
-            </div>
-          </div>
+            {cargandoHorarios && <p className="text-sm">Cargando...</p>}
 
-          {error && paso === 1 && (
-            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
-              {error}
-            </div>
-          )}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {horarios.map((hora) => {
+                const estado = estadoHorario(hora);
+                const seleccionado = form.horario === hora;
 
-          {paso === 1 && (
-            <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-              <h2 className="text-xl font-semibold">
-                1. Datos y condiciones previas
-              </h2>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Nombre y apellido
-                </label>
-                <input
-                  className="w-full border rounded-xl p-3"
-                  value={form.nombre}
-                  onChange={(e) =>
-                    setForm({ ...form, nombre: e.target.value })
-                  }
-                  placeholder="Ej. Juan Pérez"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">DNI</label>
-                <input
-                  className="w-full border rounded-xl p-3"
-                  value={form.dni}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      dni: e.target.value.replace(/\D/g, ""),
-                    })
-                  }
-                  placeholder="Ej. 30123456"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Celular
-                </label>
-                <input
-                  type="text"
-                  className="w-full border rounded-xl p-3"
-                  placeholder="Ej. 2991234567"
-                  value={form.celular}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      celular: normalizarCelular(e.target.value),
-                    })
-                  }
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  Ingrese solo números, sin espacios ni guiones.
-                </p>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <label className="block text-sm font-semibold mb-2">
-                  ¿Tiene 65 años o más?
-                </label>
-
-                <div className="flex gap-3">
+                return (
                   <button
-                    type="button"
-                    onClick={() => setForm({ ...form, mayor65: "Sí" })}
-                    className={`flex-1 rounded-xl border p-3 ${form.mayor65 === "Sí"
-                      ? "bg-orange-500 text-white"
-                      : "bg-white"
-                      }`}
-                  >
-                    Sí
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, mayor65: "No" })}
-                    className={`flex-1 rounded-xl border p-3 ${form.mayor65 === "No"
-                      ? "bg-orange-500 text-white"
-                      : "bg-white"
-                      }`}
-                  >
-                    No
-                  </button>
-                </div>
-
-                {form.mayor65 === "Sí" && (
-                  <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
-                    Antes de continuar, deberá consultar previamente por WhatsApp
-                    al número <strong>A DEFINIR</strong>, ya que debe
-                    coordinarse un estudio particular requerido por la
-                    Superintendencia de Transporte de la Nación.
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <label className="block text-sm font-semibold mb-2">
-                  ¿Tiene estudios de laboratorio realizados dentro de los
-                  últimos 90 días?
-                </label>
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
+                    key={hora}
+                    disabled={estado.bloqueado}
                     onClick={() =>
-                      setForm({ ...form, tieneLaboratorioReciente: "Sí" })
+                      setForm({
+                        ...form,
+                        horario: hora,
+                        metodoPago: "",
+                      })
                     }
-                    className={`flex-1 rounded-xl border p-3 ${form.tieneLaboratorioReciente === "Sí"
-                      ? "bg-orange-500 text-white"
-                      : "bg-white"
-                      }`}
-                  >
-                    Sí
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm({ ...form, tieneLaboratorioReciente: "No" })
-                    }
-                    className={`flex-1 rounded-xl border p-3 ${form.tieneLaboratorioReciente === "No"
-                      ? "bg-orange-500 text-white"
-                      : "bg-white"
-                      }`}
-                  >
-                    No
-                  </button>
-                </div>
-
-                {form.tieneLaboratorioReciente === "Sí" && (
-                  <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
-                    Deberá enviar los estudios al mail{" "}
-                    <strong>A DEFINIR</strong>. Desde allí se le indicará cómo
-                    continuar con el proceso.
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Locación
-                </label>
-
-                <select
-                  className="w-full border rounded-xl p-3 bg-white"
-                  value={form.locacion}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      locacion: e.target.value,
-                      horario: "",
-                    })
-                  }
-                >
-                  <option value="">Seleccione una locación</option>
-                  {locaciones.map((locacion) => (
-                    <option key={locacion} value={locacion}>
-                      {locacion}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Fecha</label>
-
-                <input
-                  type="date"
-                  className="w-full border rounded-xl p-3"
-                  value={form.fecha}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      fecha: e.target.value,
-                      horario: "",
-                    })
-                  }
-                />
-              </div>
-
-              <button
-                disabled={!formularioPaso1Completo}
-                onClick={avanzarAPaso2}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
-              >
-                Continuar
-              </button>
-            </div>
-          )}
-
-          {paso === 2 && (
-            <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-              <h2 className="text-xl font-semibold">2. Elegir horario</h2>
-
-              <div className="bg-slate-50 border rounded-xl p-4 text-sm text-slate-700 space-y-1">
-                <p>
-                  <strong>Paciente:</strong> {form.nombre}
-                </p>
-                <p>
-                  <strong>Locación:</strong> {form.locacion}
-                </p>
-                <p>
-                  <strong>Fecha:</strong> {form.fecha}
-                </p>
-              </div>
-
-              {cargandoHorarios && (
-                <p className="text-sm text-slate-500">
-                  Cargando disponibilidad de horarios...
-                </p>
-              )}
-
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {horarios.map((hora) => {
-                  const estado = estadoHorario(hora);
-                  const seleccionado = form.horario === hora;
-
-                  return (
-                    <button
-                      key={hora}
-                      type="button"
-                      disabled={estado.bloqueado}
-                      onClick={() => setForm({ ...form, horario: hora })}
-                      className={`rounded-xl border p-4 text-left transition ${seleccionado
+                    className={`rounded-xl border p-4 text-left ${seleccionado
                         ? "bg-orange-500 text-white border-orange-500"
                         : estado.clases
+                      }`}
+                  >
+                    <div className="font-bold">{hora}</div>
+                    <div className="text-xs">{estado.texto}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {form.horario && (
+              <div className="bg-white border rounded-2xl p-4 space-y-4">
+                <h3 className="font-semibold">Método de pago</h3>
+
+                {!permiteEfectivo && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
+                    Como el turno se reserva dentro de las próximas 24 hs, solo
+                    se permite pago por Mercado Pago o Transferencia. El pago
+                    debe confirmarse dentro de los próximos 60 minutos.
+                  </div>
+                )}
+
+                {permiteEfectivo && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-slate-700">
+                    Como faltan más de 24 hs para el turno, puede pagar por
+                    Mercado Pago, Transferencia o en efectivo en sucursal. El
+                    pago debe confirmarse hasta 24 hs antes del turno.
+                  </div>
+                )}
+
+                <div className="grid gap-3">
+                  {metodosPagoDisponibles.map((metodo) => (
+                    <button
+                      key={metodo}
+                      type="button"
+                      onClick={() =>
+                        setForm({
+                          ...form,
+                          metodoPago: metodo,
+                        })
+                      }
+                      className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
+                          ? "bg-orange-500 text-white border-orange-500"
+                          : "bg-white"
                         }`}
                     >
-                      <div className="font-bold">{hora}</div>
-                      <div className="text-xs">{estado.texto}</div>
+                      {metodo}
                     </button>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
-                  {error}
+                {form.metodoPago === "Transferencia" && datosPago && (
+                  <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+                    <p>
+                      <strong>Alias:</strong> {datosPago.alias}
+                    </p>
+                    <p>
+                      <strong>Titular:</strong> {datosPago.titular}
+                    </p>
+                    <p>
+                      Luego de transferir, administración deberá validar el pago
+                      para confirmar el turno.
+                    </p>
+                  </div>
+                )}
+
+                {form.metodoPago === "Mercado Pago" && datosPago && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm space-y-2">
+                    <p>
+                      Se generará un link/QR de Mercado Pago correspondiente a:
+                    </p>
+                    <p>
+                      <strong>{form.locacion}</strong>
+                    </p>
+                  </div>
+                )}
+
+                {form.metodoPago === "Efectivo en sucursal" && (
+                  <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+                    <p>
+                      Puede abonar en efectivo en la sucursal seleccionada hasta
+                      24 hs antes del turno.
+                    </p>
+                    <p>
+                      <strong>Dirección:</strong>{" "}
+                      {direccionesCentroMedico[form.locacion]}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setPaso(1)}
+                className="flex-1 border rounded-xl p-3"
+              >
+                Volver
+              </button>
+
+              <button
+                disabled={!form.horario || !form.metodoPago || cargando}
+                onClick={generarPreReserva}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
+              >
+                {cargando ? "Guardando..." : "Generar pre-reserva"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {paso === 3 && (
+          <div className="bg-white rounded-2xl p-6 shadow space-y-5">
+            <h2 className="text-xl font-semibold text-amber-700">
+              Pre-reserva generada
+            </h2>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+              Su horario quedó bloqueado provisoriamente.
+              <br />
+              Debe realizar el pago para confirmar definitivamente el turno.
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm space-y-3">
+              <h3 className="font-semibold text-green-800">
+                Pago para confirmar el turno
+              </h3>
+
+              <p>
+                <strong>Método seleccionado:</strong> {form.metodoPago}
+              </p>
+
+              {permiteEfectivo ? (
+                <p>
+                  El pago debe estar confirmado hasta{" "}
+                  <strong>24 hs antes del turno</strong>.
+                </p>
+              ) : (
+                <p>
+                  Como el turno fue reservado dentro de las próximas 24 hs, el
+                  pago debe confirmarse dentro de los próximos{" "}
+                  <strong>60 minutos</strong>.
+                </p>
+              )}
+
+              <p>
+                <strong>Vencimiento del pago:</strong>{" "}
+                {formatearFechaHora(vencimientoPago)}
+              </p>
+
+              {form.metodoPago === "Mercado Pago" && datosPago && (
+                <>
+                  <div className="bg-white border rounded-xl p-4 text-center">
+                    <p className="text-xs text-slate-500 mb-2">
+                      QR de pago simulado - {form.locacion}
+                    </p>
+
+                    <div className="mx-auto h-40 w-40 border-2 border-dashed rounded-xl flex items-center justify-center text-slate-400 text-sm">
+                      QR PAGO
+                    </div>
+                  </div>
+
+                  <a
+                    href={datosPago.linkMercadoPago}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full text-center bg-green-600 hover:bg-green-700 text-white rounded-xl p-3"
+                  >
+                    Abrir link de Mercado Pago
+                  </a>
+                </>
+              )}
+
+              {form.metodoPago === "Transferencia" && datosPago && (
+                <div className="bg-white border rounded-xl p-4 text-sm space-y-1">
+                  <p>
+                    <strong>Alias:</strong> {datosPago.alias}
+                  </p>
+                  <p>
+                    <strong>Titular:</strong> {datosPago.titular}
+                  </p>
+                  <p>
+                    Luego de realizar la transferencia, envíe el comprobante
+                    indicando nombre, DNI, fecha y horario del turno.
+                  </p>
                 </div>
               )}
 
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError("");
-                    setPaso(1);
-                  }}
-                  className="flex-1 border rounded-xl p-3"
-                >
-                  Volver
-                </button>
-
-                <button
-                  type="button"
-                  disabled={!form.horario || cargando}
-                  onClick={generarPreReserva}
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
-                >
-                  {cargando ? "Guardando..." : "Generar pre-reserva"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {paso === 3 && (
-            <div className="bg-white rounded-2xl p-6 shadow space-y-5">
-              <h2 className="text-xl font-semibold text-amber-700">
-                Pre-reserva generada
-              </h2>
-
-              <p>
-                Su turno quedó reservado provisoriamente por{" "}
-                <strong>1 hora</strong>.
-              </p>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                Para confirmar la reserva debe realizar transferencia bancaria y
-                enviar el comprobante indicando DNI.
-                <br />
-                La confirmación final será realizada manualmente por
-                administración.
-              </div>
-
-              <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
-                <p>
-                  <strong>Paciente:</strong> {form.nombre}
-                </p>
-                <p>
-                  <strong>DNI:</strong> {form.dni}
-                </p>
-                <p>
-                  <strong>Celular:</strong> {form.celular}
-                </p>
-                <p>
-                  <strong>Locación:</strong> {form.locacion}
-                </p>
-                <p>
-                  <strong>Fecha:</strong> {form.fecha}
-                </p>
-                <p>
-                  <strong>Horario del circuito médico:</strong> {form.horario}
-                </p>
-                <p>
-                  <strong>Estado:</strong> Pendiente de confirmación
-                </p>
-              </div>
-
-              {form.mayor65 === "Sí" && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-slate-800 space-y-2">
-                  <h3 className="font-semibold text-red-800">
-                    Aviso importante para mayores de 65 años
-                  </h3>
+              {form.metodoPago === "Efectivo en sucursal" && (
+                <div className="bg-white border rounded-xl p-4 text-sm space-y-1">
                   <p>
-                    Deberá consultar previamente por WhatsApp al número{" "}
-                    <strong>A DEFINIR</strong>, ya que debe coordinarse un
-                    estudio particular requerido por la Superintendencia de
-                    Transporte de la Nación.
+                    Puede abonar en efectivo en la sucursal seleccionada.
+                  </p>
+                  <p>
+                    <strong>Dirección:</strong>{" "}
+                    {direccionesCentroMedico[form.locacion]}
+                  </p>
+                  <p>
+                    Recuerde que el pago debe realizarse hasta 24 hs antes del
+                    turno.
                   </p>
                 </div>
+              )}
+
+              <p className="text-xs text-slate-600">
+                Si el pago no se confirma antes del vencimiento indicado, la
+                pre-reserva podrá ser liberada automáticamente.
+              </p>
+            </div>
+
+            <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+              <p>
+                <strong>Paciente:</strong> {form.nombre}
+              </p>
+              <p>
+                <strong>DNI:</strong> {form.dni}
+              </p>
+              <p>
+                <strong>Celular:</strong> {form.celular}
+              </p>
+              <p>
+                <strong>Fecha:</strong> {form.fecha}
+              </p>
+              <p>
+                <strong>Horario centro médico:</strong> {form.horario}
+              </p>
+              <p>
+                <strong>Sede:</strong> {form.locacion}
+              </p>
+              <p>
+                <strong>Dirección centro médico:</strong>{" "}
+                {direccionesCentroMedico[form.locacion]}
+              </p>
+
+              {form.tieneLaboratorioReciente === "No" && (
+                <>
+                  <p>
+                    <strong>Laboratorio:</strong> 07:00 hs
+                  </p>
+                  <p>
+                    <strong>Dirección laboratorio:</strong>{" "}
+                    {direccionesLaboratorio[form.locacion]}
+                  </p>
+                  <p>
+                    <strong>Ayuno mínimo:</strong> 8 horas
+                  </p>
+                </>
               )}
 
               {form.tieneLaboratorioReciente === "Sí" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-800 space-y-2">
-                  <h3 className="font-semibold text-blue-800">
-                    Estudios de laboratorio recientes
-                  </h3>
-                  <p>
-                    Usted indicó que posee estudios de laboratorio realizados
-                    dentro de los últimos 90 días.
-                  </p>
-                  <p>
-                    Deberá enviarlos al mail <strong>A DEFINIR</strong>. Desde
-                    allí se le indicará cómo continuar con el proceso.
-                  </p>
-                </div>
+                <p>
+                  <strong>Laboratorio:</strong> Usted indicó que posee estudios
+                  realizados dentro de los últimos 90 días.
+                </p>
               )}
 
-              {form.tieneLaboratorioReciente === "No" && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-slate-800 space-y-3">
-                  <h3 className="font-semibold text-red-800">
-                    Información importante para el laboratorio
-                  </h3>
-
-                  <p>
-                    El estudio de laboratorio se realiza a primera hora, por
-                    orden de llegada. Deberá presentarse a las{" "}
-                    <strong>07:00 hs</strong>.
-                  </p>
-
-                  <p>
-                    <strong>Dirección del laboratorio:</strong>{" "}
-                    {direccionesLaboratorio[form.locacion]}
-                  </p>
-
-                  <p>
-                    <strong>Indicaciones previas:</strong> deberá presentarse
-                    con un ayuno mínimo de <strong>8 horas</strong>, salvo
-                    indicación médica diferente.
-                  </p>
-                </div>
+              {form.mayor65 === "Sí" && (
+                <p className="text-red-700 font-medium">
+                  Atención: requiere coordinación especial previa por ser mayor
+                  de 65 años.
+                </p>
               )}
 
-              <button
-                type="button"
-                onClick={reiniciarFormulario}
-                className="w-full border rounded-xl p-3"
-              >
-                Nueva pre-reserva
-              </button>
+              <p>
+                <strong>Estado:</strong> Pendiente de pago
+              </p>
             </div>
-          )}
-        </section>
+
+            <button
+              onClick={reiniciarFormulario}
+              className="w-full border rounded-xl p-3"
+            >
+              Nueva pre-reserva
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );

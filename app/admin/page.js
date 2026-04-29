@@ -4,42 +4,51 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
 
-const sedes = [
-  "Sede Cipolletti",
-  "Sede Neuquén",
-  "Sede Plaza Huincul",
-];
+const sedes = ["Sede Cipolletti", "Sede Neuquén", "Sede Plaza Huincul"];
 
 const estados = [
   "Todos",
-  "Pendiente",
+  "Pendiente de pago",
+  "Pagado",
   "Confirmado",
   "No Confirmado",
   "Ausente",
 ];
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
+function formatearFechaHora(valor) {
+  if (!valor) return "-";
+  return new Date(valor).toLocaleString("es-AR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
 }
 
 function badgeEstado(estado) {
-  if (estado === "Confirmado") {
-    return "bg-green-100 text-green-800";
-  }
-
-  if (estado === "Ausente") {
-    return "bg-slate-200 text-slate-800";
-  }
-
-  if (estado === "No Confirmado") {
-    return "bg-red-100 text-red-800";
-  }
-
+  if (estado === "Confirmado") return "bg-green-100 text-green-800";
+  if (estado === "Pagado") return "bg-blue-100 text-blue-800";
+  if (estado === "Ausente") return "bg-slate-200 text-slate-800";
+  if (estado === "No Confirmado") return "bg-red-100 text-red-800";
   return "bg-amber-100 text-amber-800";
 }
 
-function textoSeguro(valor) {
-  return valor || "-";
+function estadoVencimiento(turno) {
+  if (turno.pagado || turno.estado !== "Pendiente de pago") return "OK";
+  if (!turno.vencimiento_pago_at) return "Sin vencimiento";
+
+  const ahora = new Date();
+  const vencimiento = new Date(turno.vencimiento_pago_at);
+  const diffMin = (vencimiento - ahora) / 1000 / 60;
+
+  if (diffMin <= 0) return "Vencido";
+  if (diffMin <= 120) return "Por vencer";
+  return "Vigente";
+}
+
+function badgeVencimiento(valor) {
+  if (valor === "Vencido") return "bg-red-100 text-red-800";
+  if (valor === "Por vencer") return "bg-orange-100 text-orange-800";
+  if (valor === "Vigente") return "bg-green-100 text-green-800";
+  return "bg-slate-100 text-slate-700";
 }
 
 export default function AdminPage() {
@@ -91,28 +100,49 @@ export default function AdminPage() {
     iniciar();
   }, [router]);
 
-  const confirmarTurno = async (id) => {
+  const confirmarPago = async (id) => {
     const { error } = await supabase
       .from("turnos")
       .update({
-        estado: "Confirmado",
-        whatsapp_confirmacion_simulado: true,
+        pagado: true,
+        pago_confirmado_at: new Date().toISOString(),
+        estado: "Pagado",
       })
       .eq("id", id);
 
     if (error) {
-      alert("No se pudo confirmar.");
+      alert("No se pudo confirmar el pago.");
       return;
     }
 
     cargarTurnos();
   };
 
-  const noConfirmarTurno = async (id) => {
+  const confirmarTurno = async (id) => {
+    const { error } = await supabase
+      .from("turnos")
+      .update({
+        estado: "Confirmado",
+        pagado: true,
+        pago_confirmado_at: new Date().toISOString(),
+        whatsapp_confirmacion_simulado: true,
+      })
+      .eq("id", id);
+
+    if (error) {
+      alert("No se pudo confirmar el turno.");
+      return;
+    }
+
+    cargarTurnos();
+  };
+
+  const noConfirmarTurno = async (id, motivo = "No confirmado manualmente") => {
     const { error } = await supabase
       .from("turnos")
       .update({
         estado: "No Confirmado",
+        motivo_no_confirmacion: motivo,
       })
       .eq("id", id);
 
@@ -124,10 +154,56 @@ export default function AdminPage() {
     cargarTurnos();
   };
 
+  const marcarAusente = async (id) => {
+    const { error } = await supabase
+      .from("turnos")
+      .update({
+        ausente: true,
+        estado: "Ausente",
+      })
+      .eq("id", id);
+
+    if (error) {
+      alert("No se pudo marcar ausente.");
+      return;
+    }
+
+    cargarTurnos();
+  };
+
+  const liberarPagosVencidos = async () => {
+    setProcesando(true);
+
+    const ahora = new Date();
+
+    for (const turno of turnos) {
+      if (turno.estado !== "Pendiente de pago") continue;
+      if (turno.pagado) continue;
+      if (!turno.vencimiento_pago_at) continue;
+
+      const vencimiento = new Date(turno.vencimiento_pago_at);
+
+      if (vencimiento <= ahora) {
+        await supabase
+          .from("turnos")
+          .update({
+            estado: "No Confirmado",
+            vencido_automaticamente: true,
+            motivo_no_confirmacion: "Pago no confirmado antes del vencimiento",
+          })
+          .eq("id", turno.id);
+      }
+    }
+
+    setProcesando(false);
+    cargarTurnos();
+    alert("Pagos vencidos liberados.");
+  };
+
   const ejecutarRecordatorios = async () => {
     setProcesando(true);
 
-    const hoy = new Date();
+    const ahora = new Date();
     const ms24 = 24 * 60 * 60 * 1000;
     const ms2 = 2 * 60 * 60 * 1000;
 
@@ -135,7 +211,7 @@ export default function AdminPage() {
       if (turno.estado !== "Confirmado") continue;
 
       const fechaHora = new Date(`${turno.fecha}T${turno.horario}:00`);
-      const diferencia = fechaHora - hoy;
+      const diferencia = fechaHora - ahora;
 
       if (
         diferencia <= ms24 &&
@@ -144,9 +220,7 @@ export default function AdminPage() {
       ) {
         await supabase
           .from("turnos")
-          .update({
-            recordatorio_24h_simulado: true,
-          })
+          .update({ recordatorio_24h_simulado: true })
           .eq("id", turno.id);
       }
 
@@ -157,9 +231,7 @@ export default function AdminPage() {
       ) {
         await supabase
           .from("turnos")
-          .update({
-            recordatorio_2h_simulado: true,
-          })
+          .update({ recordatorio_2h_simulado: true })
           .eq("id", turno.id);
       }
     }
@@ -169,118 +241,38 @@ export default function AdminPage() {
     alert("Recordatorios simulados ejecutados.");
   };
 
-  const liberarPendientes = async () => {
-    setProcesando(true);
-
-    const ahora = new Date();
-
-    for (const turno of turnos) {
-      if (turno.estado !== "Pendiente") continue;
-      if (!turno.created_at) continue;
-
-      const creado = new Date(turno.created_at);
-      const minutos = (ahora - creado) / 1000 / 60;
-
-      if (minutos >= 60) {
-        await supabase
-          .from("turnos")
-          .update({
-            estado: "No Confirmado",
-            vencido_automaticamente: true,
-            motivo_no_confirmacion:
-              "Pre-reserva vencida automáticamente",
-          })
-          .eq("id", turno.id);
-      }
-    }
-
-    setProcesando(false);
-    cargarTurnos();
-    alert("Pendientes vencidos liberados.");
-  };
-
-  const marcarAusente = async (id) => {
-    await supabase
-      .from("turnos")
-      .update({
-        ausente: true,
-        estado: "Ausente",
-      })
-      .eq("id", id);
-
-    cargarTurnos();
-  };
-
   const turnosFiltrados = useMemo(() => {
     return turnos.filter((t) => {
       const coincideEstado =
         filtroEstado === "Todos" || t.estado === filtroEstado;
 
-      const coincideSede =
-        filtroSede === "Todas" || t.locacion === filtroSede;
+      const coincideSede = filtroSede === "Todas" || t.locacion === filtroSede;
+      const coincideFecha = !filtroFecha || t.fecha === filtroFecha;
 
-      const coincideFecha =
-        !filtroFecha || t.fecha === filtroFecha;
-
-      const texto = `${t.nombre || ""} ${t.dni || ""} ${t.celular || ""
+      const texto = `${t.nombre || ""} ${t.dni || ""} ${t.celular || ""} ${t.metodo_pago || ""
         }`.toLowerCase();
-
-      const coincideBusqueda = texto.includes(
-        busqueda.toLowerCase()
-      );
 
       return (
         coincideEstado &&
         coincideSede &&
         coincideFecha &&
-        coincideBusqueda
+        texto.includes(busqueda.toLowerCase())
       );
     });
-  }, [
-    turnos,
-    filtroEstado,
-    filtroSede,
-    filtroFecha,
-    busqueda,
-  ]);
+  }, [turnos, filtroEstado, filtroSede, filtroFecha, busqueda]);
 
   const metricas = useMemo(() => {
-    const total = turnos.length;
-    const pendientes = turnos.filter(
-      (t) => t.estado === "Pendiente"
-    ).length;
-
-    const confirmados = turnos.filter(
-      (t) => t.estado === "Confirmado"
-    ).length;
-
-    const noConfirmados = turnos.filter(
-      (t) => t.estado === "No Confirmado"
-    ).length;
-
-    const ausentes = turnos.filter((t) => t.ausente).length;
-
-    const record24 = turnos.filter(
-      (t) => t.recordatorio_24h_simulado
-    ).length;
-
-    const record2 = turnos.filter(
-      (t) => t.recordatorio_2h_simulado
-    ).length;
-
-    const vencidos = turnos.filter(
-      (t) => t.vencido_automaticamente
-    ).length;
-
     return {
-      total,
-      pendientes,
-      confirmados,
-      noConfirmados,
-      ausentes,
-      record24,
-      record2,
-      vencidos,
+      total: turnos.length,
+      pendientesPago: turnos.filter((t) => t.estado === "Pendiente de pago")
+        .length,
+      pagados: turnos.filter((t) => t.pagado).length,
+      confirmados: turnos.filter((t) => t.estado === "Confirmado").length,
+      vencidos: turnos.filter((t) => estadoVencimiento(t) === "Vencido")
+        .length,
+      porVencer: turnos.filter((t) => estadoVencimiento(t) === "Por vencer")
+        .length,
+      ausentes: turnos.filter((t) => t.estado === "Ausente").length,
     };
   }, [turnos]);
 
@@ -290,20 +282,21 @@ export default function AdminPage() {
         <div className="bg-white rounded-2xl p-6 shadow">
           <div className="flex flex-col md:flex-row md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">
-                Panel Administrativo
-              </h1>
-              <p className="text-slate-500">
-                turnos-medicos-beta
-              </p>
+              <h1 className="text-3xl font-bold">Panel Administrativo</h1>
+              <p className="text-slate-500">Gestión de pagos y turnos</p>
             </div>
 
             <div className="flex gap-3 flex-wrap">
-              <button
-                onClick={cargarTurnos}
-                className="border rounded-xl px-4 py-2"
-              >
+              <button onClick={cargarTurnos} className="border rounded-xl px-4 py-2">
                 Actualizar
+              </button>
+
+              <button
+                onClick={liberarPagosVencidos}
+                disabled={procesando}
+                className="bg-red-600 text-white rounded-xl px-4 py-2"
+              >
+                Liberar pagos vencidos
               </button>
 
               <button
@@ -312,14 +305,6 @@ export default function AdminPage() {
                 className="bg-blue-600 text-white rounded-xl px-4 py-2"
               >
                 Ejecutar recordatorios
-              </button>
-
-              <button
-                onClick={liberarPendientes}
-                disabled={procesando}
-                className="bg-red-600 text-white rounded-xl px-4 py-2"
-              >
-                Liberar vencidos
               </button>
 
               <button
@@ -342,54 +327,35 @@ export default function AdminPage() {
           </div>
 
           <div className="bg-amber-50 rounded-2xl p-4 shadow">
-            <p className="text-sm">Pendientes</p>
-            <p className="text-3xl font-bold">
-              {metricas.pendientes}
-            </p>
+            <p className="text-sm">Pendientes de pago</p>
+            <p className="text-3xl font-bold">{metricas.pendientesPago}</p>
+          </div>
+
+          <div className="bg-blue-50 rounded-2xl p-4 shadow">
+            <p className="text-sm">Pagados</p>
+            <p className="text-3xl font-bold">{metricas.pagados}</p>
           </div>
 
           <div className="bg-green-50 rounded-2xl p-4 shadow">
             <p className="text-sm">Confirmados</p>
-            <p className="text-3xl font-bold">
-              {metricas.confirmados}
-            </p>
-          </div>
-
-          <div className="bg-red-50 rounded-2xl p-4 shadow">
-            <p className="text-sm">No confirmados</p>
-            <p className="text-3xl font-bold">
-              {metricas.noConfirmados}
-            </p>
+            <p className="text-3xl font-bold">{metricas.confirmados}</p>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-4 shadow">
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="bg-red-50 rounded-2xl p-4 shadow">
+            <p className="text-sm">Pagos vencidos</p>
+            <p className="text-2xl font-bold">{metricas.vencidos}</p>
+          </div>
+
+          <div className="bg-orange-50 rounded-2xl p-4 shadow">
+            <p className="text-sm">Por vencer</p>
+            <p className="text-2xl font-bold">{metricas.porVencer}</p>
+          </div>
+
+          <div className="bg-slate-50 rounded-2xl p-4 shadow">
             <p className="text-sm">Ausentes</p>
-            <p className="text-2xl font-bold">
-              {metricas.ausentes}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 shadow">
-            <p className="text-sm">Recordatorio 24h</p>
-            <p className="text-2xl font-bold">
-              {metricas.record24}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 shadow">
-            <p className="text-sm">Recordatorio 2h</p>
-            <p className="text-2xl font-bold">
-              {metricas.record2}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 shadow">
-            <p className="text-sm">Pendientes vencidos</p>
-            <p className="text-2xl font-bold">
-              {metricas.vencidos}
-            </p>
+            <p className="text-2xl font-bold">{metricas.ausentes}</p>
           </div>
         </div>
 
@@ -397,19 +363,15 @@ export default function AdminPage() {
           <div className="grid md:grid-cols-4 gap-3">
             <input
               className="border rounded-xl p-3"
-              placeholder="Buscar"
+              placeholder="Buscar nombre, DNI, celular o método"
               value={busqueda}
-              onChange={(e) =>
-                setBusqueda(e.target.value)
-              }
+              onChange={(e) => setBusqueda(e.target.value)}
             />
 
             <select
-              className="border rounded-xl p-3"
+              className="border rounded-xl p-3 bg-white"
               value={filtroEstado}
-              onChange={(e) =>
-                setFiltroEstado(e.target.value)
-              }
+              onChange={(e) => setFiltroEstado(e.target.value)}
             >
               {estados.map((e) => (
                 <option key={e}>{e}</option>
@@ -417,11 +379,9 @@ export default function AdminPage() {
             </select>
 
             <select
-              className="border rounded-xl p-3"
+              className="border rounded-xl p-3 bg-white"
               value={filtroSede}
-              onChange={(e) =>
-                setFiltroSede(e.target.value)
-              }
+              onChange={(e) => setFiltroSede(e.target.value)}
             >
               <option>Todas</option>
               {sedes.map((s) => (
@@ -433,16 +393,19 @@ export default function AdminPage() {
               type="date"
               className="border rounded-xl p-3"
               value={filtroFecha}
-              onChange={(e) =>
-                setFiltroFecha(e.target.value)
-              }
+              onChange={(e) => setFiltroFecha(e.target.value)}
             />
           </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow overflow-x-auto">
           {cargando && <p>Cargando...</p>}
-          {error && <p>{error}</p>}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm mb-4">
+              {error}
+            </div>
+          )}
 
           {!cargando && (
             <table className="w-full text-sm">
@@ -453,66 +416,100 @@ export default function AdminPage() {
                   <th className="p-3">Paciente</th>
                   <th className="p-3">Celular</th>
                   <th className="p-3">Sede</th>
+                  <th className="p-3">Método</th>
+                  <th className="p-3">Vencimiento pago</th>
+                  <th className="p-3">Pago</th>
                   <th className="p-3">Estado</th>
                   <th className="p-3">Acciones</th>
                 </tr>
               </thead>
 
               <tbody>
-                {turnosFiltrados.map((t) => (
-                  <tr key={t.id} className="border-b">
-                    <td className="p-3">{t.fecha}</td>
-                    <td className="p-3 font-semibold">
-                      {t.horario}
-                    </td>
-                    <td className="p-3">{t.nombre}</td>
-                    <td className="p-3">
-                      {textoSeguro(t.celular)}
-                    </td>
-                    <td className="p-3">{t.locacion}</td>
+                {turnosFiltrados.map((t) => {
+                  const vencimiento = estadoVencimiento(t);
 
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${badgeEstado(
-                          t.estado
-                        )}`}
-                      >
-                        {t.estado}
-                      </span>
-                    </td>
+                  return (
+                    <tr key={t.id} className="border-b align-top">
+                      <td className="p-3">{t.fecha}</td>
+                      <td className="p-3 font-semibold">{t.horario}</td>
+                      <td className="p-3">{t.nombre}</td>
+                      <td className="p-3">{t.celular || "-"}</td>
+                      <td className="p-3">{t.locacion}</td>
+                      <td className="p-3">{t.metodo_pago || "-"}</td>
 
-                    <td className="p-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() =>
-                            confirmarTurno(t.id)
-                          }
-                          className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs"
+                      <td className="p-3">
+                        <div>{formatearFechaHora(t.vencimiento_pago_at)}</div>
+                        <span
+                          className={`inline-block mt-1 px-2 py-1 rounded-full text-xs ${badgeVencimiento(
+                            vencimiento
+                          )}`}
                         >
-                          Confirmar
-                        </button>
+                          {vencimiento}
+                        </span>
+                      </td>
 
-                        <button
-                          onClick={() =>
-                            noConfirmarTurno(t.id)
-                          }
-                          className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs"
-                        >
-                          No confirmar
-                        </button>
+                      <td className="p-3">
+                        {t.pagado ? (
+                          <span className="text-green-700 font-semibold">
+                            Pagado
+                          </span>
+                        ) : (
+                          <span className="text-red-700 font-semibold">
+                            No pagado
+                          </span>
+                        )}
+                      </td>
 
-                        <button
-                          onClick={() =>
-                            marcarAusente(t.id)
-                          }
-                          className="bg-slate-700 text-white px-3 py-2 rounded-xl text-xs"
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${badgeEstado(
+                            t.estado
+                          )}`}
                         >
-                          Ausente
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {t.estado || "Pendiente de pago"}
+                        </span>
+                      </td>
+
+                      <td className="p-3 min-w-[360px]">
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => confirmarPago(t.id)}
+                            disabled={t.pagado || t.estado === "No Confirmado"}
+                            className="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300"
+                          >
+                            Confirmar pago
+                          </button>
+
+                          <button
+                            onClick={() => confirmarTurno(t.id)}
+                            disabled={t.estado === "Confirmado"}
+                            className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300"
+                          >
+                            Confirmar turno
+                          </button>
+
+                          <button
+                            onClick={() =>
+                              noConfirmarTurno(t.id, "Cancelado manualmente")
+                            }
+                            disabled={t.estado === "No Confirmado"}
+                            className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300"
+                          >
+                            No confirmar
+                          </button>
+
+                          <button
+                            onClick={() => marcarAusente(t.id)}
+                            disabled={t.estado === "Ausente"}
+                            className="bg-slate-700 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300"
+                          >
+                            Ausente
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
