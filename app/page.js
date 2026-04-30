@@ -307,7 +307,7 @@ export default function Home() {
           </h1>
 
           <p className="text-slate-600">
-            Turnos Médicos Licencia Profesional
+            Licencia de Conducir Profesional
           </p>
         </div>
 
