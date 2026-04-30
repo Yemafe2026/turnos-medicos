@@ -303,11 +303,11 @@ export default function Home() {
           />
 
           <h1 className="text-3xl font-bold text-slate-800">
-            Gestión de Turnos Médicos
+            Turnos Médicos
           </h1>
 
           <p className="text-slate-600">
-            Sistema de pre-reserva médica laboral
+            Turnos Médicos Licencia Profesional
           </p>
         </div>
 
@@ -453,8 +453,8 @@ export default function Home() {
                       })
                     }
                     className={`rounded-xl border p-4 text-left ${seleccionado
-                        ? "bg-orange-500 text-white border-orange-500"
-                        : estado.clases
+                      ? "bg-orange-500 text-white border-orange-500"
+                      : estado.clases
                       }`}
                   >
                     <div className="font-bold">{hora}</div>
@@ -496,8 +496,8 @@ export default function Home() {
                         })
                       }
                       className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
-                          ? "bg-orange-500 text-white border-orange-500"
-                          : "bg-white"
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : "bg-white"
                         }`}
                     >
                       {metodo}
