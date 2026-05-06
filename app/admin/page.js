@@ -279,13 +279,47 @@ Te esperamos.`,
                     </td>
 
                     <td className="p-3">
-                      <button
-                        onClick={() => confirmarPago(t)}
-                        disabled={pagoConfirmado}
-                        className="bg-green-600 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
-                      </button>
+                      <div className="flex gap-2 flex-wrap">
+
+                        {!t.comprobante_recibido ? (
+                          <button
+                            onClick={async () => {
+                              await supabase
+                                .from("turnos")
+                                .update({
+                                  comprobante_recibido: true,
+                                })
+                                .eq("id", t.id);
+
+                              cargarTurnos();
+                            }}
+                            className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs"
+                          >
+                            Comprobante recibido
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="bg-green-200 text-green-800 px-3 py-2 rounded-xl text-xs cursor-not-allowed"
+                          >
+                            ✔ Comprobante recibido
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => confirmarPago(t)}
+                          disabled={pagoConfirmado || !t.comprobante_recibido}
+                          className={`px-3 py-2 rounded-xl text-xs text-white ${pagoConfirmado
+                              ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                              : t.comprobante_recibido
+                                ? "bg-green-600 hover:bg-green-700"
+                                : "bg-slate-300 cursor-not-allowed"
+                            }`}
+                        >
+                          {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
+                        </button>
+
+                      </div>
                     </td>
 
                     <td className="p-3">
