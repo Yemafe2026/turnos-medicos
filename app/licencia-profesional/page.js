@@ -10,29 +10,29 @@ const locaciones = [
 ];
 
 const direccionesLaboratorio = {
-    "Sede Cipolletti": "DIRECCION_LABORATORIO_CIPOLLETTI_A_DEFINIR",
+    "Sede Cipolletti": "25 de Mayo 525",
     "Sede Neuquén": "DIRECCION_LABORATORIO_NEUQUEN_A_DEFINIR",
     "Sede Plaza Huincul": "DIRECCION_LABORATORIO_PLAZAHUINCUL_A_DEFINIR",
 };
 
 const direccionesCentroMedico = {
-    "Sede Cipolletti": "DIRECCION_CENTRO_MEDICO_CIPOLLETTI_A_DEFINIR",
-    "Sede Neuquén": "DIRECCION_CENTRO_MEDICO_NEUQUEN_A_DEFINIR",
+    "Sede Cipolletti": "Alem 257",
+    "Sede Neuquén": "Colón 338",
     "Sede Plaza Huincul": "DIRECCION_CENTRO_MEDICO_PLAZAHUINCUL_A_DEFINIR",
 };
 
 const datosPagoPorLocacion = {
     "Sede Cipolletti": {
-        alias: "ALIAS_CIPOLLETTI_A_DEFINIR",
-        titular: "TITULAR_CIPOLLETTI_A_DEFINIR",
+        alias: "CUENCA.CUADRA.GUSTO",
+        titular: "HUINCU MED S.A.S",
     },
     "Sede Neuquén": {
-        alias: "ALIAS_NEUQUEN_A_DEFINIR",
-        titular: "TITULAR_NEUQUEN_A_DEFINIR",
+        alias: "POSE.MARCA.REBAJAR",
+        titular: "VANNLOGIC S.A.S",
     },
     "Sede Plaza Huincul": {
-        alias: "ALIAS_PLAZAHUINCUL_A_DEFINIR",
-        titular: "TITULAR_PLAZAHUINCUL_A_DEFINIR",
+        alias: "POSE.MARCA.REBAJAR",
+        titular: "VANNLOGIC S.A.S",
     },
 };
 
@@ -407,8 +407,8 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
                     <div className="grid grid-cols-3 gap-2 text-center text-sm">
                         <div
                             className={`rounded-xl p-2 ${paso === 1
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             1. Datos
@@ -416,8 +416,8 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
 
                         <div
                             className={`rounded-xl p-2 ${paso === 2
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             2. Horario y pago
@@ -425,8 +425,8 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
 
                         <div
                             className={`rounded-xl p-2 ${paso === 3
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             3. Pre-reserva
@@ -605,8 +605,8 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
                                             })
                                         }
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : estado.clases
+                                            ? "bg-orange-500 text-white border-orange-500"
+                                            : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
@@ -648,8 +648,8 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
                                                 })
                                             }
                                             className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
-                                                    ? "bg-orange-500 text-white border-orange-500"
-                                                    : "bg-white"
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : "bg-white"
                                                 }`}
                                         >
                                             {metodo}
@@ -776,10 +776,29 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
                                 </div>
                             )}
 
-                            <p className="text-xs text-slate-600">
-                                Si el pago no se confirma antes del vencimiento indicado, la
-                                pre-reserva podrá ser liberada automáticamente.
-                            </p>
+                            <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-5 space-y-3">
+                                <div className="text-red-700 font-bold text-lg flex items-center gap-2">
+                                    ⚠️ Importante
+                                </div>
+
+                                <div className="text-sm text-red-800 space-y-2">
+                                    <p>
+                                        Una vez realizada la transferencia, deberá enviar el comprobante
+                                        de pago vía WhatsApp al mismo número desde el cual recibirá el
+                                        mensaje de pre-confirmación.
+                                    </p>
+
+                                    <p className="font-semibold">
+                                        El turno será confirmado únicamente luego de recibir y validar el comprobante.
+                                    </p>
+
+                                    <p>
+                                        Si el comprobante no se recibe antes del vencimiento informado,
+                                        la pre-reserva podrá cancelarse automáticamente y el horario
+                                        volverá a quedar disponible.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
