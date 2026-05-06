@@ -25,17 +25,14 @@ const datosPagoPorLocacion = {
     "Sede Cipolletti": {
         alias: "ALIAS_CIPOLLETTI_A_DEFINIR",
         titular: "TITULAR_CIPOLLETTI_A_DEFINIR",
-        linkMercadoPago: "LINK_MP_CIPOLLETTI_A_DEFINIR",
     },
     "Sede Neuquén": {
         alias: "ALIAS_NEUQUEN_A_DEFINIR",
         titular: "TITULAR_NEUQUEN_A_DEFINIR",
-        linkMercadoPago: "LINK_MP_NEUQUEN_A_DEFINIR",
     },
     "Sede Plaza Huincul": {
         alias: "ALIAS_PLAZAHUINCUL_A_DEFINIR",
         titular: "TITULAR_PLAZAHUINCUL_A_DEFINIR",
-        linkMercadoPago: "LINK_MP_PLAZAHUINCUL_A_DEFINIR",
     },
 };
 
@@ -49,7 +46,7 @@ const horarios = [
     "14:00",
 ];
 
-const metodosPagoBase = ["Mercado Pago", "Transferencia"];
+const metodosPagoBase = ["Transferencia"];
 
 function normalizarCelular(valor) {
     return valor.replace(/\D/g, "");
@@ -286,10 +283,8 @@ export default function LicenciaProfesionalPage() {
                     pagado: false,
                     metodo_pago: form.metodoPago,
                     vencimiento_pago_at: vencimiento,
-                    link_pago: pago?.linkMercadoPago || "",
-                    qr_pago:
-                        "QR_SIMULADO_" +
-                        form.locacion.toUpperCase().replaceAll(" ", "_"),
+                    link_pago: "",
+                    qr_pago: "",
                     whatsapp_prereserva_simulado: true,
                 },
             ])
@@ -324,7 +319,14 @@ ${form.mayor65 === "Sí"
             }
 
 Método de pago seleccionado: ${form.metodoPago}
+
+Datos para transferencia:
+Alias: ${pago?.alias || ""}
+Titular: ${pago?.titular || ""}
+
 Vencimiento del pago: ${formatearFechaHora(vencimiento)}
+
+Una vez realizado el pago, será validado por administración.
 
 Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá ser liberada automáticamente.`;
 
@@ -621,16 +623,16 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
                                 {!permiteEfectivo && (
                                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
                                         Como el turno se reserva dentro de las próximas 24 hs, solo
-                                        se permite pago por Mercado Pago o Transferencia. El pago
-                                        debe confirmarse dentro de los próximos 60 minutos.
+                                        se permite pago por transferencia bancaria. El pago debe
+                                        confirmarse dentro de los próximos 60 minutos.
                                     </div>
                                 )}
 
                                 {permiteEfectivo && (
                                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-slate-700">
                                         Como faltan más de 24 hs para el turno, puede pagar por
-                                        Mercado Pago, Transferencia o en efectivo en sucursal. El
-                                        pago debe confirmarse hasta 24 hs antes del turno.
+                                        transferencia bancaria o en efectivo en sucursal. El pago
+                                        debe confirmarse hasta 24 hs antes del turno.
                                     </div>
                                 )}
 
@@ -666,17 +668,6 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
                                         <p>
                                             Luego de transferir, administración deberá validar el pago
                                             para confirmar el turno.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {form.metodoPago === "Mercado Pago" && datosPago && (
-                                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm space-y-2">
-                                        <p>
-                                            Se generará un link/QR de Mercado Pago correspondiente a:
-                                        </p>
-                                        <p>
-                                            <strong>{form.locacion}</strong>
                                         </p>
                                     </div>
                                 )}
@@ -753,29 +744,6 @@ Si el pago no se confirma antes del vencimiento indicado, la pre-reserva podrá 
                                 <strong>Vencimiento del pago:</strong>{" "}
                                 {formatearFechaHora(vencimientoPago)}
                             </p>
-
-                            {form.metodoPago === "Mercado Pago" && datosPago && (
-                                <>
-                                    <div className="bg-white border rounded-xl p-4 text-center">
-                                        <p className="text-xs text-slate-500 mb-2">
-                                            QR de pago simulado - {form.locacion}
-                                        </p>
-
-                                        <div className="mx-auto h-40 w-40 border-2 border-dashed rounded-xl flex items-center justify-center text-slate-400 text-sm">
-                                            QR PAGO
-                                        </div>
-                                    </div>
-
-                                    <a
-                                        href={datosPago.linkMercadoPago}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="block w-full text-center bg-green-600 hover:bg-green-700 text-white rounded-xl p-3"
-                                    >
-                                        Abrir link de Mercado Pago
-                                    </a>
-                                </>
-                            )}
 
                             {form.metodoPago === "Transferencia" && datosPago && (
                                 <div className="bg-white border rounded-xl p-4 text-sm space-y-1">
