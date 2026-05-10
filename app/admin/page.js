@@ -310,10 +310,10 @@ Te esperamos.`,
                           onClick={() => confirmarPago(t)}
                           disabled={pagoConfirmado || !t.comprobante_recibido}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${pagoConfirmado
-                              ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                              : t.comprobante_recibido
-                                ? "bg-green-600 hover:bg-green-700"
-                                : "bg-slate-300 cursor-not-allowed"
+                            ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            : t.comprobante_recibido
+                              ? "bg-green-600 hover:bg-green-700"
+                              : "bg-slate-300 cursor-not-allowed"
                             }`}
                         >
                           {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
@@ -324,21 +324,33 @@ Te esperamos.`,
 
                     <td className="p-3">
                       <div className="flex gap-2 flex-wrap">
+
                         <button
                           onClick={() => marcarRealizado(t)}
-                          disabled={!estaConfirmado}
-                          className="bg-blue-600 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={!estaConfirmado || t.estado === "Realizado" || t.estado === "Ausente"}
+                          className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Realizado"
+                              ? "bg-blue-200 text-blue-800 cursor-not-allowed"
+                              : estaConfirmado
+                                ? "bg-blue-600 hover:bg-blue-700"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            }`}
                         >
-                          Se presentó
+                          {t.estado === "Realizado" ? "✔ Se presentó" : "Se presentó"}
                         </button>
 
                         <button
                           onClick={() => marcarAusente(t)}
-                          disabled={!estaConfirmado}
-                          className="bg-slate-700 text-white px-3 py-2 rounded-xl text-xs disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={!estaConfirmado || t.estado === "Realizado" || t.estado === "Ausente"}
+                          className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Ausente"
+                              ? "bg-slate-400 cursor-not-allowed"
+                              : estaConfirmado
+                                ? "bg-slate-700 hover:bg-slate-800"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            }`}
                         >
-                          No se presentó
+                          {t.estado === "Ausente" ? "✔ Ausente" : "No se presentó"}
                         </button>
+
                       </div>
                     </td>
                   </tr>
