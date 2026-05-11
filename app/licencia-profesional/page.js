@@ -214,7 +214,7 @@ export default function LicenciaProfesionalPage() {
         };
     };
 
-    const avanzarAPaso2 = () => {
+    const avanzarAPaso2 = async () => {
         setError("");
 
         if (
@@ -231,16 +231,30 @@ export default function LicenciaProfesionalPage() {
         }
 
         const celularLimpio = normalizarCelular(form.celular);
+        const dniLimpio = String(form.dni || "").replace(/\D/g, "");
+
+        if (dniLimpio.length < 7) {
+            setError("Ingrese un DNI válido.");
+            return;
+        }
 
         if (celularLimpio.length < 8) {
             setError("Ingrese un número de celular válido.");
             return;
         }
+        const validacionIdentidad = await validarIdentidadPaciente(
+            form.nombre,
+            dniLimpio
+        );
 
+        if (!validacionIdentidad.valido) {
+            setError(validacionIdentidad.mensaje);
+            return;
+        }
         setForm({
             ...form,
             nombre: form.nombre.trim(),
-            dni: form.dni.trim(),
+            dni: dniLimpio,
             celular: celularLimpio,
         });
 
