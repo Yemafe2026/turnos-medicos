@@ -215,50 +215,57 @@ export default function LicenciaProfesionalPage() {
     };
 
     const avanzarAPaso2 = async () => {
-        setError("");
+        try {
+            setError("");
 
-        if (
-            !form.nombre.trim() ||
-            !form.dni.trim() ||
-            !form.celular.trim() ||
-            !form.mayor65 ||
-            !form.tieneLaboratorioReciente ||
-            !form.locacion ||
-            !form.fecha
-        ) {
-            setError("Complete todos los datos antes de continuar.");
-            return;
+            if (
+                !form.nombre.trim() ||
+                !form.dni.trim() ||
+                !form.celular.trim() ||
+                !form.mayor65 ||
+                !form.tieneLaboratorioReciente ||
+                !form.locacion ||
+                !form.fecha
+            ) {
+                setError("Complete todos los datos antes de continuar.");
+                return;
+            }
+
+            const celularLimpio = normalizarCelular(form.celular);
+            const dniLimpio = String(form.dni || "").replace(/\D/g, "");
+
+            if (celularLimpio.length < 8) {
+                setError("Ingrese un número de celular válido.");
+                return;
+            }
+
+            if (dniLimpio.length < 7) {
+                setError("Ingrese un DNI válido.");
+                return;
+            }
+
+            const validacionIdentidad = await validarIdentidadPaciente(
+                form.nombre,
+                dniLimpio
+            );
+
+            if (!validacionIdentidad.valido) {
+                setError(validacionIdentidad.mensaje);
+                return;
+            }
+
+            setForm({
+                ...form,
+                nombre: form.nombre.trim(),
+                dni: dniLimpio,
+                celular: celularLimpio,
+            });
+
+            setPaso(2);
+        } catch (error) {
+            console.error(error);
+            setError("Ocurrió un error al validar los datos del paciente.");
         }
-
-        const celularLimpio = normalizarCelular(form.celular);
-        const dniLimpio = String(form.dni || "").replace(/\D/g, "");
-
-        if (dniLimpio.length < 7) {
-            setError("Ingrese un DNI válido.");
-            return;
-        }
-
-        if (celularLimpio.length < 8) {
-            setError("Ingrese un número de celular válido.");
-            return;
-        }
-        const validacionIdentidad = await validarIdentidadPaciente(
-            form.nombre,
-            dniLimpio
-        );
-
-        if (!validacionIdentidad.valido) {
-            setError(validacionIdentidad.mensaje);
-            return;
-        }
-        setForm({
-            ...form,
-            nombre: form.nombre.trim(),
-            dni: dniLimpio,
-            celular: celularLimpio,
-        });
-
-        setPaso(2);
     };
 
     const generarPreReserva = async () => {
