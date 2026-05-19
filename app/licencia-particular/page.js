@@ -37,11 +37,23 @@ function normalizarTexto(valor) {
 
 function formatearTelefonoWhatsApp(celular) {
     const limpio = String(celular || "").replace(/\D/g, "");
-    if (limpio.startsWith("549")) return limpio;
-    if (limpio.startsWith("54")) return `549${limpio.slice(2)}`;
-    return `549${limpio}`;
-}
 
+    if (limpio.startsWith("54")) return limpio;
+
+    if (limpio.startsWith("15")) {
+        return `54299${limpio.slice(2)}`;
+    }
+
+    if (limpio.startsWith("29915")) {
+        return `54${limpio}`;
+    }
+
+    if (limpio.startsWith("299")) {
+        return `54299${limpio.slice(3)}`;
+    }
+
+    return limpio;
+}
 function obtenerFechaHoraTurno(fecha, horario) {
     return new Date(`${fecha}T${horario}:00`);
 }
@@ -449,8 +461,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                     <div className="grid grid-cols-3 gap-2 text-center text-sm">
                         <div
                             className={`rounded-xl p-2 ${paso === 1
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             1. Datos
@@ -458,8 +470,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
                         <div
                             className={`rounded-xl p-2 ${paso === 2
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             2. Horario y pago
@@ -467,8 +479,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
                         <div
                             className={`rounded-xl p-2 ${paso === 3
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             3. Solicitud
@@ -588,8 +600,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                             })
                                         }
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : estado.clases
+                                            ? "bg-orange-500 text-white border-orange-500"
+                                            : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
@@ -631,8 +643,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                                 })
                                             }
                                             className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
-                                                    ? "bg-orange-500 text-white border-orange-500"
-                                                    : "bg-white"
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : "bg-white"
                                                 }`}
                                         >
                                             {metodo}
