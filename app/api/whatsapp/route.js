@@ -3,18 +3,10 @@ export async function POST(req) {
         const body = await req.json();
 
         const telefono = String(body.telefono || "").replace(/\D/g, "");
-        const mensaje = String(body.mensaje || "").trim();
 
         if (!telefono) {
             return Response.json(
                 { error: "Falta el número de teléfono." },
-                { status: 400 }
-            );
-        }
-
-        if (!mensaje) {
-            return Response.json(
-                { error: "Falta el mensaje." },
                 { status: 400 }
             );
         }
@@ -41,18 +33,14 @@ export async function POST(req) {
         const payload = {
             messaging_product: "whatsapp",
             to: telefono,
-            type: "text",
-            text: {
-                preview_url: false,
-                body: mensaje,
+            type: "template",
+            template: {
+                name: "hello_world",
+                language: {
+                    code: "en_US",
+                },
             },
         };
-
-        console.log("Enviando WhatsApp:", {
-            telefono,
-            phoneNumberId,
-            mensajeLength: mensaje.length,
-        });
 
         const metaResponse = await fetch(url, {
             method: "POST",
@@ -64,8 +52,6 @@ export async function POST(req) {
         });
 
         const metaData = await metaResponse.json();
-
-        console.log("Respuesta Meta:", metaData);
 
         if (!metaResponse.ok) {
             return Response.json(
@@ -84,8 +70,6 @@ export async function POST(req) {
             meta: metaData,
         });
     } catch (error) {
-        console.error("Error general WhatsApp:", error);
-
         return Response.json(
             {
                 error: "Error inesperado enviando WhatsApp.",
