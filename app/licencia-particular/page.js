@@ -34,22 +34,21 @@ function normalizarTexto(valor) {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, " ");
 }
-
 function formatearTelefonoWhatsApp(celular) {
     const limpio = String(celular || "").replace(/\D/g, "");
 
     if (limpio.startsWith("54")) return limpio;
-
-    if (limpio.startsWith("15")) {
-        return `54299${limpio.slice(2)}`;
-    }
 
     if (limpio.startsWith("29915")) {
         return `54${limpio}`;
     }
 
     if (limpio.startsWith("299")) {
-        return `54299${limpio.slice(3)}`;
+        return `5429915${limpio.slice(3)}`;
+    }
+
+    if (limpio.startsWith("15")) {
+        return `54299${limpio}`;
     }
 
     return limpio;
