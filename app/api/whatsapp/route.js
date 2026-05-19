@@ -3,10 +3,18 @@ export async function POST(req) {
         const body = await req.json();
 
         const telefono = String(body.telefono || "").replace(/\D/g, "");
+        const mensaje = String(body.mensaje || "").trim();
 
         if (!telefono) {
             return Response.json(
                 { error: "Falta el número de teléfono." },
+                { status: 400 }
+            );
+        }
+
+        if (!mensaje) {
+            return Response.json(
+                { error: "Falta el mensaje." },
                 { status: 400 }
             );
         }
@@ -28,17 +36,15 @@ export async function POST(req) {
             );
         }
 
-        const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+        const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
 
         const payload = {
             messaging_product: "whatsapp",
             to: telefono,
-            type: "template",
-            template: {
-                name: "hello_world",
-                language: {
-                    code: "en_US",
-                },
+            type: "text",
+            text: {
+                preview_url: false,
+                body: mensaje,
             },
         };
 
