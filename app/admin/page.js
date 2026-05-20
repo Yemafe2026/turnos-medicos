@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
 
-const sedes = ["Sede Cipolletti", "Sede Neuquén", "Sede Plaza Huincul"];
+const sedes = ["Todas", "Sede Cipolletti", "Sede Neuquén", "Sede Plaza Huincul"];
 
 const estados = [
   "Todos",
@@ -23,6 +23,12 @@ function badgeEstado(estado) {
   if (estado === "Ausente") return "bg-slate-200 text-slate-800";
   if (estado === "No Confirmado") return "bg-red-100 text-red-800";
   return "bg-amber-100 text-amber-800";
+}
+
+function esEstadoFinal(estado) {
+  return ["Realizado", "Ausente", "No Confirmado", "Cancelado"].includes(
+    estado
+  );
 }
 
 export default function AdminPage() {
@@ -65,8 +71,30 @@ export default function AdminPage() {
     init();
   }, [router]);
 
+  const marcarComprobanteRecibido = async (turno) => {
+    if (turno.comprobante_recibido || turno.pagado || esEstadoFinal(turno.estado)) {
+      return;
+    }
+
+    await supabase
+      .from("turnos")
+      .update({
+        comprobante_recibido: true,
+      })
+      .eq("id", turno.id);
+
+    cargarTurnos();
+  };
+
   const confirmarPago = async (turno) => {
-    if (turno.pagado || turno.estado === "Confirmado") return;
+    if (
+      turno.pagado ||
+      turno.estado === "Confirmado" ||
+      !turno.comprobante_recibido ||
+      esEstadoFinal(turno.estado)
+    ) {
+      return;
+    }
 
     await supabase
       .from("turnos")
@@ -85,8 +113,9 @@ export default function AdminPage() {
       body: JSON.stringify({
         telefono: turno.celular,
         mensaje: `Hola ${turno.nombre}, tu turno fue CONFIRMADO.
-Fecha: ${turno.fecha}
-Horario: ${turno.horario}
+
+Fecha del Turno: ${turno.fecha}
+Horario del Turno: ${turno.horario}
 Sede: ${turno.locacion}
 
 Te esperamos.`,
@@ -97,6 +126,8 @@ Te esperamos.`,
   };
 
   const marcarRealizado = async (turno) => {
+    if (turno.estado !== "Confirmado") return;
+
     await supabase
       .from("turnos")
       .update({
@@ -109,6 +140,8 @@ Te esperamos.`,
   };
 
   const marcarAusente = async (turno) => {
+    if (turno.estado !== "Confirmado") return;
+
     await supabase
       .from("turnos")
       .update({
@@ -171,7 +204,7 @@ Te esperamos.`,
 
         <div className="bg-white p-4 rounded-2xl shadow grid md:grid-cols-5 gap-3">
           <input
-            placeholder="Buscar"
+            placeholder="Buscar por paciente, DNI, celular o sede"
             className="border p-2 rounded-xl"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -202,7 +235,6 @@ Te esperamos.`,
             onChange={(e) => setFiltroSede(e.target.value)}
             className="border p-2 rounded-xl bg-white"
           >
-            <option>Todas</option>
             {sedes.map((s) => (
               <option key={s}>{s}</option>
             ))}
@@ -240,6 +272,13 @@ Te esperamos.`,
               {turnosFiltrados.map((t) => {
                 const estaConfirmado = t.estado === "Confirmado";
                 const pagoConfirmado = t.pagado || t.estado === "Confirmado";
+                const finalizado = esEstadoFinal(t.estado);
+                const puedeRecibirComprobante =
+                  !t.comprobante_recibido && !pagoConfirmado && !finalizado;
+                const puedeConfirmarPago =
+                  t.comprobante_recibido && !pagoConfirmado && !finalizado;
+                const puedeMarcarAsistencia =
+                  estaConfirmado && !finalizado;
 
                 return (
                   <tr key={t.id} className="border-b align-top">
@@ -254,7 +293,8 @@ Te esperamos.`,
                     <td className="p-3 font-semibold">{t.horario}</td>
 
                     <td className="p-3">{t.nombre}</td>
-                    <td className="p-3">{t.dni}</td>
+
+                    <td className="p-3">{t.dni || "-"}</td>
 
                     <td className="p-3">{t.celular}</td>
 
@@ -282,50 +322,70 @@ Te esperamos.`,
 
                     <td className="p-3">
                       <div className="flex gap-2 flex-wrap">
-
-                        {!t.comprobante_recibido ? (
-                          <button
-                            onClick={async () => {
-                              await supabase
-                                .from("turnos")
-                                .update({
-                                  comprobante_recibido: true,
-                                })
-                                .eq("id", t.id);
-
-                              cargarTurnos();
-                            }}
-                            className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-2 rounded-xl text-xs"
-                          >
-                            Comprobante recibido
-                          </button>
-                        ) : (
-                          <button
-                            disabled
-                            className="bg-green-200 text-green-800 px-3 py-2 rounded-xl text-xs cursor-not-allowed"
-                          >
-                            ✔ Comprobante recibido
-                          </button>
-                        )}
+                        <button
+                          onClick={() => marcarComprobanteRecibido(t)}
+                          disabled={!puedeRecibirComprobante}
+                          className={`px-3 py-2 rounded-xl text-xs ${t.comprobante_recibido
+                              ? "bg-green-200 text-green-800 cursor-not-allowed"
+                              : puedeRecibirComprobante
+                                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            }`}
+                        >
+                          {t.comprobante_recibido
+                            ? "✔ Comprobante recibido"
+                            : "Comprobante recibido"}
+                        </button>
 
                         <button
                           onClick={() => confirmarPago(t)}
-                          disabled={pagoConfirmado || !t.comprobante_recibido}
+                          disabled={!puedeConfirmarPago}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${pagoConfirmado
-                            ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                            : t.comprobante_recibido
-                              ? "bg-green-600 hover:bg-green-700"
-                              : "bg-slate-300 cursor-not-allowed"
+                              ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                              : puedeConfirmarPago
+                                ? "bg-green-600 hover:bg-green-700"
+                                : "bg-slate-300 cursor-not-allowed opacity-60"
                             }`}
                         >
-                          {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
+                          {pagoConfirmado
+                            ? "Pago confirmado"
+                            : "Confirmar pago"}
                         </button>
-
                       </div>
                     </td>
 
                     <td className="p-3">
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => marcarRealizado(t)}
+                          disabled={!puedeMarcarAsistencia}
+                          className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Realizado"
+                              ? "bg-blue-200 text-blue-800 cursor-not-allowed"
+                              : puedeMarcarAsistencia
+                                ? "bg-blue-600 hover:bg-blue-700"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            }`}
+                        >
+                          {t.estado === "Realizado"
+                            ? "✔ Se presentó"
+                            : "Se presentó"}
+                        </button>
 
+                        <button
+                          onClick={() => marcarAusente(t)}
+                          disabled={!puedeMarcarAsistencia}
+                          className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Ausente"
+                              ? "bg-slate-400 cursor-not-allowed"
+                              : puedeMarcarAsistencia
+                                ? "bg-slate-700 hover:bg-slate-800"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            }`}
+                        >
+                          {t.estado === "Ausente"
+                            ? "✔ Ausente"
+                            : "No se presentó"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
