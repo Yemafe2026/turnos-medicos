@@ -617,7 +617,7 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                             }
                         >
                             <option value="">
-                                ¿Tiene estudios de laboratorio dentro de los últimos 90 días?
+                                ¿Tiene estudios de laboratorio dentro de los últimos 60 días?
                             </option>
                             <option value="Sí">Sí</option>
                             <option value="No">No</option>
@@ -945,7 +945,7 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                             {form.tieneLaboratorioReciente === "Sí" && (
                                 <p>
                                     <strong>Laboratorio:</strong> Usted indicó que posee estudios
-                                    realizados dentro de los últimos 90 días.
+                                    realizados dentro de los últimos 60 días.
                                 </p>
                             )}
 
