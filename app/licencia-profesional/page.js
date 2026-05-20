@@ -417,7 +417,7 @@ ${form.tieneLaboratorioReciente === "No"
                 ? `Laboratorio: debe presentarse a las 07:00 hs.
 Dirección laboratorio: ${direccionesLaboratorio[form.locacion]}
 Indicaciones: ayuno mínimo de 8 horas.`
-                : `Laboratorio: usted indicó que posee estudios realizados dentro de los últimos 90 días.`
+                : `Laboratorio: usted indicó que posee estudios realizados dentro de los últimos 60 días.`
             }
 
 ${form.mayor65 === "Sí"
