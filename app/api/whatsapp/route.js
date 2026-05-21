@@ -1,4 +1,4 @@
-const USAR_PLANTILLA_PRERESERVA = false;
+const USAR_PLANTILLA_PRERESERVA = true;
 
 function crearPayloadTexto({ telefono, mensaje }) {
     return {

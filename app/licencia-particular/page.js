@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 
 const locacion = "Sede Cipolletti";
-
 const direccionCentroMedico = "Alem 257";
 
 const datosPago = {
@@ -23,7 +22,7 @@ const horarios = [
 const metodosPagoBase = ["Transferencia"];
 
 function normalizarCelular(valor) {
-    return valor.replace(/\D/g, "");
+    return String(valor || "").replace(/\D/g, "");
 }
 
 function normalizarTexto(valor) {
@@ -34,6 +33,7 @@ function normalizarTexto(valor) {
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/\s+/g, " ");
 }
+
 function formatearTelefonoWhatsApp(celular) {
     const limpio = String(celular || "").replace(/\D/g, "");
 
@@ -53,6 +53,7 @@ function formatearTelefonoWhatsApp(celular) {
 
     return limpio;
 }
+
 function obtenerFechaHoraTurno(fecha, horario) {
     return new Date(`${fecha}T${horario}:00`);
 }
@@ -86,6 +87,14 @@ function formatearFechaHora(fechaISO) {
         dateStyle: "short",
         timeStyle: "short",
     });
+}
+
+function formatearPlazoPago(fecha, horario, vencimientoISO) {
+    if (faltanMasDe24Horas(fecha, horario)) {
+        return `hasta ${formatearFechaHora(vencimientoISO)}`;
+    }
+
+    return "60 minutos desde la generación de la pre-reserva";
 }
 
 async function validarIdentidadPaciente(nombre, dni) {
@@ -123,7 +132,7 @@ async function validarIdentidadPaciente(nombre, dni) {
     const { data: registrosPorNombre, error: errorNombre } = await supabase
         .from("turnos")
         .select("nombre, dni")
-        .ilike("nombre", nombreLimpio);
+        .ilike("nombre", `%${nombreLimpio}%`);
 
     if (errorNombre) {
         console.error(errorNombre);
@@ -153,7 +162,11 @@ async function validarIdentidadPaciente(nombre, dni) {
     };
 }
 
-async function enviarWhatsappPreReserva({ telefono, mensaje }) {
+async function enviarWhatsappPreReserva({
+    telefono,
+    mensaje,
+    variablesPlantilla,
+}) {
     const response = await fetch("/api/whatsapp", {
         method: "POST",
         headers: {
@@ -162,6 +175,7 @@ async function enviarWhatsappPreReserva({ telefono, mensaje }) {
         body: JSON.stringify({
             telefono: formatearTelefonoWhatsApp(telefono),
             mensaje,
+            variablesPlantilla,
         }),
     });
 
@@ -269,49 +283,54 @@ export default function LicenciaParticularPage() {
     };
 
     const avanzarAPaso2 = async () => {
-        setError("");
+        try {
+            setError("");
 
-        if (
-            !form.nombre.trim() ||
-            !form.dni.trim() ||
-            !form.celular.trim() ||
-            !form.fecha
-        ) {
-            setError("Complete todos los datos antes de continuar.");
-            return;
+            if (
+                !form.nombre.trim() ||
+                !form.dni.trim() ||
+                !form.celular.trim() ||
+                !form.fecha
+            ) {
+                setError("Complete todos los datos antes de continuar.");
+                return;
+            }
+
+            const celularLimpio = normalizarCelular(form.celular);
+            const dniLimpio = String(form.dni || "").replace(/\D/g, "");
+
+            if (celularLimpio.length < 8) {
+                setError("Ingrese un número de celular válido.");
+                return;
+            }
+
+            if (dniLimpio.length < 7) {
+                setError("Ingrese un DNI válido.");
+                return;
+            }
+
+            const validacionIdentidad = await validarIdentidadPaciente(
+                form.nombre,
+                dniLimpio
+            );
+
+            if (!validacionIdentidad.valido) {
+                setError(validacionIdentidad.mensaje);
+                return;
+            }
+
+            setForm({
+                ...form,
+                nombre: form.nombre.trim(),
+                dni: dniLimpio,
+                celular: celularLimpio,
+            });
+
+            setPaso(2);
+        } catch (error) {
+            console.error(error);
+            setError("Ocurrió un error al validar los datos del paciente.");
         }
-
-        const celularLimpio = normalizarCelular(form.celular);
-        const dniLimpio = String(form.dni || "").replace(/\D/g, "");
-
-        if (celularLimpio.length < 8) {
-            setError("Ingrese un número de celular válido.");
-            return;
-        }
-
-        if (dniLimpio.length < 7) {
-            setError("Ingrese un DNI válido.");
-            return;
-        }
-
-        const validacionIdentidad = await validarIdentidadPaciente(
-            form.nombre,
-            dniLimpio
-        );
-
-        if (!validacionIdentidad.valido) {
-            setError(validacionIdentidad.mensaje);
-            return;
-        }
-
-        setForm({
-            ...form,
-            nombre: form.nombre.trim(),
-            dni: dniLimpio,
-            celular: celularLimpio,
-        });
-
-        setPaso(2);
     };
 
     const generarPreReserva = async () => {
@@ -329,6 +348,7 @@ export default function LicenciaParticularPage() {
 
         const celularLimpio = normalizarCelular(form.celular);
         const vencimiento = calcularVencimientoPago(form.fecha, form.horario);
+        const plazoPago = formatearPlazoPago(form.fecha, form.horario, vencimiento);
 
         setCargando(true);
 
@@ -365,31 +385,46 @@ export default function LicenciaParticularPage() {
             return;
         }
 
-        const mensajeParticular = `Hola ${form.nombre.trim()}, recibimos tu pre-reserva para Licencia de Conducir Particular.
+        const mensajeParticular = `Pre-reserva recibida.
 
-Fecha: ${form.fecha}
-Horario: ${form.horario}
+Paciente: ${form.nombre.trim()}
+Trámite: Licencia Particular
+
+Fecha del Turno: ${form.fecha}
+Horario del Turno: ${form.horario}
 Sede: ${locacion}
 Dirección: ${direccionCentroMedico}
 
-Método de pago seleccionado: ${form.metodoPago}
+Método de pago: ${form.metodoPago}
 
 Datos para transferencia:
 Alias: ${datosPago.alias}
 Titular: ${datosPago.titular}
 
-IMPORTANTE:
-Una vez realizada la transferencia, enviar comprobante de pago vía WhatsApp al mismo número desde el cual recibirá este mensaje.
-Solo luego de recibir y validar el comprobante, se confirmará el turno.
+Importante: una vez realizada la transferencia, enviá el comprobante por WhatsApp a este mismo número.
 
-Vencimiento del pago: ${formatearFechaHora(vencimiento)}
+El turno se confirmará únicamente luego de recibir y validar el comprobante.
 
-Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva podrá ser liberada automáticamente.`;
+Vencimiento del pago: ${plazoPago}.`;
+
+        const variablesPlantilla = [
+            form.nombre.trim(),
+            "Licencia Particular",
+            form.fecha,
+            form.horario,
+            locacion,
+            direccionCentroMedico,
+            form.metodoPago,
+            datosPago.alias,
+            datosPago.titular,
+            plazoPago,
+        ];
 
         try {
             await enviarWhatsappPreReserva({
                 telefono: celularLimpio,
                 mensaje: mensajeParticular,
+                variablesPlantilla,
             });
 
             if (turnoCreado?.id) {
@@ -460,8 +495,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                     <div className="grid grid-cols-3 gap-2 text-center text-sm">
                         <div
                             className={`rounded-xl p-2 ${paso === 1
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             1. Datos
@@ -469,8 +504,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
                         <div
                             className={`rounded-xl p-2 ${paso === 2
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             2. Horario y pago
@@ -478,8 +513,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
                         <div
                             className={`rounded-xl p-2 ${paso === 3
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             3. Solicitud
@@ -599,8 +634,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                             })
                                         }
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                            ? "bg-orange-500 text-white border-orange-500"
-                                            : estado.clases
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
@@ -642,8 +677,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                                 })
                                             }
                                             className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : "bg-white"
+                                                    ? "bg-orange-500 text-white border-orange-500"
+                                                    : "bg-white"
                                                 }`}
                                         >
                                             {metodo}
@@ -767,17 +802,17 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                     <p>
                                         Una vez realizada la transferencia, deberá enviar el
                                         comprobante de pago vía WhatsApp al mismo número desde el
-                                        cual recibirá el mensaje de confirmación.
+                                        cual recibirá el mensaje de pre-confirmación.
                                     </p>
 
                                     <p className="font-semibold">
-                                        Solo luego de recibir y validar el comprobante, se
-                                        confirmará el turno.
+                                        El turno será confirmado únicamente luego de recibir y
+                                        validar el comprobante.
                                     </p>
 
                                     <p>
                                         Si el comprobante no se recibe antes del vencimiento
-                                        indicado, la pre-reserva podrá cancelarse automáticamente y
+                                        informado, la pre-reserva podrá cancelarse automáticamente y
                                         el horario volverá a quedar disponible.
                                     </p>
                                 </div>
