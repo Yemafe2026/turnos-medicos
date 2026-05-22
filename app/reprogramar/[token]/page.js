@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../supabase";
-import { useParams } from "next/navigation";
 
 const horariosParticular = [
     "08:00", "08:20", "08:40",
@@ -35,8 +34,7 @@ function esHorarioLiberado(estado) {
     );
 }
 
-export default function ReprogramarTurnoPage() {
-    const params = useParams();
+export default function ReprogramarTurnoPage({ params }) {
     const token = params?.token;
 
     const [cargando, setCargando] = useState(true);
@@ -49,6 +47,12 @@ export default function ReprogramarTurnoPage() {
     const [reprogramado, setReprogramado] = useState(false);
 
     const cargarTurnoOriginal = async () => {
+        if (!token) {
+            setCargando(false);
+            setError("No se recibió un token de reprogramación válido.");
+            return;
+        }
+
         setCargando(true);
         setError("");
 
@@ -56,11 +60,17 @@ export default function ReprogramarTurnoPage() {
             .from("turnos")
             .select("*")
             .eq("token_reprogramacion", token)
-            .single();
+            .maybeSingle();
 
         setCargando(false);
 
-        if (error || !data) {
+        if (error) {
+            console.error(error);
+            setError("No se pudo consultar la reprogramación.");
+            return;
+        }
+
+        if (!data) {
             setError("No se encontró una reprogramación válida.");
             return;
         }
@@ -93,9 +103,7 @@ export default function ReprogramarTurnoPage() {
     };
 
     useEffect(() => {
-        if (token) {
-            cargarTurnoOriginal();
-        }
+        cargarTurnoOriginal();
     }, [token]);
 
     useEffect(() => {
@@ -326,8 +334,8 @@ export default function ReprogramarTurnoPage() {
                                         disabled={estado.bloqueado}
                                         onClick={() => setHorario(hora)}
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                            ? "bg-orange-500 text-white border-orange-500"
-                                            : estado.clases
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
