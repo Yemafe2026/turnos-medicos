@@ -13,6 +13,7 @@ const estados = [
   "Realizado",
   "Ausente",
   "No Confirmado",
+  "Reprogramado",
 ];
 
 const tiposTurno = ["Todos", "Carnet Profesional", "Licencia Particular"];
@@ -22,6 +23,7 @@ function badgeEstado(estado) {
   if (estado === "Realizado") return "bg-blue-100 text-blue-800";
   if (estado === "Ausente") return "bg-slate-200 text-slate-800";
   if (estado === "No Confirmado") return "bg-red-100 text-red-800";
+  if (estado === "Reprogramado") return "bg-purple-100 text-purple-800";
   return "bg-amber-100 text-amber-800";
 }
 
@@ -29,6 +31,34 @@ function esEstadoFinal(estado) {
   return ["Realizado", "Ausente", "No Confirmado", "Cancelado"].includes(
     estado
   );
+}
+
+function generarTokenReprogramacion() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function formatearTelefonoWhatsApp(celular) {
+  const limpio = String(celular || "").replace(/\D/g, "");
+
+  if (limpio.startsWith("54")) return limpio;
+
+  if (limpio.startsWith("29915")) {
+    return `54${limpio}`;
+  }
+
+  if (limpio.startsWith("299")) {
+    return `5429915${limpio.slice(3)}`;
+  }
+
+  if (limpio.startsWith("15")) {
+    return `54299${limpio}`;
+  }
+
+  return limpio;
 }
 
 export default function AdminPage() {
@@ -72,7 +102,11 @@ export default function AdminPage() {
   }, [router]);
 
   const marcarComprobanteRecibido = async (turno) => {
-    if (turno.comprobante_recibido || turno.pagado || esEstadoFinal(turno.estado)) {
+    if (
+      turno.comprobante_recibido ||
+      turno.pagado ||
+      esEstadoFinal(turno.estado)
+    ) {
       return;
     }
 
@@ -111,7 +145,7 @@ export default function AdminPage() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        telefono: turno.celular,
+        telefono: formatearTelefonoWhatsApp(turno.celular),
         mensaje: `Hola ${turno.nombre}, tu turno fue CONFIRMADO.
 
 Fecha del Turno: ${turno.fecha}
@@ -142,13 +176,41 @@ Te esperamos.`,
   const marcarAusente = async (turno) => {
     if (turno.estado !== "Confirmado") return;
 
+    const tokenReprogramacion =
+      turno.token_reprogramacion || generarTokenReprogramacion();
+
     await supabase
       .from("turnos")
       .update({
         estado: "Ausente",
         ausente: true,
+        token_reprogramacion: tokenReprogramacion,
+        penalidad_pendiente: true,
+        penalidad_pagada: false,
+        penalidad_porcentaje: 30,
       })
       .eq("id", turno.id);
+
+    await fetch("/api/whatsapp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        telefono: formatearTelefonoWhatsApp(turno.celular),
+        usarPlantilla: true,
+        nombrePlantilla: "turno_ausente_reprogramar",
+        idioma: "es_AR",
+        variablesPlantilla: [
+          turno.nombre || "-",
+          turno.tipo_turno || "Carnet Profesional",
+          turno.fecha || "-",
+          turno.horario || "-",
+          turno.locacion || "-",
+        ],
+        tokenBoton: tokenReprogramacion,
+      }),
+    });
 
     cargarTurnos();
   };
@@ -263,6 +325,7 @@ Te esperamos.`,
                 <th className="p-3">Celular</th>
                 <th className="p-3">Estado</th>
                 <th className="p-3">Pago</th>
+                <th className="p-3">Penalidad</th>
                 <th className="p-3">Acciones</th>
                 <th className="p-3">Asistencia</th>
               </tr>
@@ -273,12 +336,14 @@ Te esperamos.`,
                 const estaConfirmado = t.estado === "Confirmado";
                 const pagoConfirmado = t.pagado || t.estado === "Confirmado";
                 const finalizado = esEstadoFinal(t.estado);
+
                 const puedeRecibirComprobante =
                   !t.comprobante_recibido && !pagoConfirmado && !finalizado;
+
                 const puedeConfirmarPago =
                   t.comprobante_recibido && !pagoConfirmado && !finalizado;
-                const puedeMarcarAsistencia =
-                  estaConfirmado && !finalizado;
+
+                const puedeMarcarAsistencia = estaConfirmado && !finalizado;
 
                 return (
                   <tr key={t.id} className="border-b align-top">
@@ -317,6 +382,20 @@ Te esperamos.`,
                         <span className="text-red-700 font-semibold">
                           No pagado
                         </span>
+                      )}
+                    </td>
+
+                    <td className="p-3">
+                      {t.penalidad_pendiente && !t.penalidad_pagada ? (
+                        <span className="text-red-700 font-semibold">
+                          30% pendiente
+                        </span>
+                      ) : t.penalidad_pagada ? (
+                        <span className="text-green-700 font-semibold">
+                          Penalidad pagada
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
                       )}
                     </td>
 
