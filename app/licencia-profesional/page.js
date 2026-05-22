@@ -49,7 +49,7 @@ const horarios = [
 const metodosPagoBase = ["Transferencia"];
 
 function normalizarCelular(valor) {
-    return valor.replace(/\D/g, "");
+    return String(valor || "").replace(/\D/g, "");
 }
 
 function normalizarTexto(valor) {
@@ -80,6 +80,7 @@ function formatearTelefonoWhatsApp(celular) {
 
     return limpio;
 }
+
 function obtenerFechaHoraTurno(fecha, horario) {
     return new Date(`${fecha}T${horario}:00`);
 }
@@ -113,6 +114,14 @@ function formatearFechaHora(fechaISO) {
         dateStyle: "short",
         timeStyle: "short",
     });
+}
+
+function formatearPlazoPago(fecha, horario, vencimientoISO) {
+    if (faltanMasDe24Horas(fecha, horario)) {
+        return `hasta ${formatearFechaHora(vencimientoISO)}`;
+    }
+
+    return "60 minutos desde la generación de la pre-reserva";
 }
 
 async function validarIdentidadPaciente(nombre, dni) {
@@ -180,7 +189,11 @@ async function validarIdentidadPaciente(nombre, dni) {
     };
 }
 
-async function enviarWhatsappPreReserva({ telefono, mensaje }) {
+async function enviarWhatsappPreReserva({
+    telefono,
+    mensaje,
+    variablesPlantilla,
+}) {
     const response = await fetch("/api/whatsapp", {
         method: "POST",
         headers: {
@@ -189,6 +202,7 @@ async function enviarWhatsappPreReserva({ telefono, mensaje }) {
         body: JSON.stringify({
             telefono: formatearTelefonoWhatsApp(telefono),
             mensaje,
+            variablesPlantilla,
         }),
     });
 
@@ -370,6 +384,7 @@ export default function LicenciaProfesionalPage() {
         const celularLimpio = normalizarCelular(form.celular);
         const pago = datosPagoPorLocacion[form.locacion];
         const vencimiento = calcularVencimientoPago(form.fecha, form.horario);
+        const plazoPago = formatearPlazoPago(form.fecha, form.horario, vencimiento);
 
         setCargando(true);
 
@@ -406,12 +421,15 @@ export default function LicenciaProfesionalPage() {
             return;
         }
 
-        const mensajeProfesional = `Hola ${form.nombre.trim()}, recibimos tu pre-reserva para Licencia de Conducir Profesional.
+        const mensajeProfesional = `Pre-reserva recibida.
 
-Fecha: ${form.fecha}
-Horario centro médico: ${form.horario}
+Paciente: ${form.nombre.trim()}
+Trámite: Licencia Profesional
+
+Fecha del Turno: ${form.fecha}
+Horario del Turno: ${form.horario}
 Sede: ${form.locacion}
-Dirección centro médico: ${direccionesCentroMedico[form.locacion]}
+Dirección: ${direccionesCentroMedico[form.locacion]}
 
 ${form.tieneLaboratorioReciente === "No"
                 ? `Laboratorio: debe presentarse a las 07:00 hs.
@@ -425,7 +443,7 @@ ${form.mayor65 === "Sí"
                 : ``
             }
 
-Método de pago seleccionado: ${form.metodoPago}
+Método de pago: ${form.metodoPago}
 
 Datos para transferencia:
 Alias: ${pago?.alias || ""}
@@ -435,14 +453,26 @@ IMPORTANTE:
 Una vez realizada la transferencia, enviar comprobante de pago vía WhatsApp al mismo número desde el cual recibirá este mensaje.
 Solo luego de recibir y validar el comprobante, se confirmará el turno.
 
-Vencimiento del pago: ${formatearFechaHora(vencimiento)}
+Vencimiento del pago: ${plazoPago}.`;
 
-Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva podrá ser liberada automáticamente.`;
+        const variablesPlantilla = [
+            form.nombre.trim(),
+            "Licencia Profesional",
+            form.fecha,
+            form.horario,
+            form.locacion,
+            direccionesCentroMedico[form.locacion],
+            form.metodoPago,
+            pago?.alias || "",
+            pago?.titular || "",
+            plazoPago,
+        ];
 
         try {
             await enviarWhatsappPreReserva({
                 telefono: celularLimpio,
                 mensaje: mensajeProfesional,
+                variablesPlantilla,
             });
 
             if (turnoCreado?.id) {
@@ -475,7 +505,6 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
         setPaso(3);
     };
-
     const reiniciarFormulario = () => {
         setPaso(1);
         setError("");
@@ -504,11 +533,11 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                     />
 
                     <h1 className="text-3xl font-bold text-slate-800">
-                        Licencia de Conducir Profesional
+                        Turnos Médicos
                     </h1>
 
                     <p className="text-slate-600">
-                        Sistema de pre-reserva para certificaciones médicas laborales.
+                        Licencia de Conducir Profesional
                     </p>
                 </div>
 
@@ -516,8 +545,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                     <div className="grid grid-cols-3 gap-2 text-center text-sm">
                         <div
                             className={`rounded-xl p-2 ${paso === 1
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             1. Datos
@@ -525,8 +554,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
                         <div
                             className={`rounded-xl p-2 ${paso === 2
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             2. Horario y pago
@@ -534,11 +563,11 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
                         <div
                             className={`rounded-xl p-2 ${paso === 3
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
+                                    ? "bg-orange-500 text-white"
+                                    : "bg-slate-100 text-slate-600"
                                 }`}
                         >
-                            3. Pre-reserva
+                            3. Solicitud
                         </div>
                     </div>
                 </div>
@@ -551,7 +580,7 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
 
                 {paso === 1 && (
                     <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-                        <h2 className="text-xl font-semibold">Datos del paciente</h2>
+                        <h2 className="text-xl font-semibold">Datos del solicitante</h2>
 
                         <input
                             className="w-full border rounded-xl p-3"
@@ -586,49 +615,83 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                             }
                         />
 
-                        <select
-                            className="w-full border rounded-xl p-3 bg-white"
-                            value={form.mayor65}
-                            onChange={(e) =>
-                                setForm({ ...form, mayor65: e.target.value })
-                            }
-                        >
-                            <option value="">¿Tiene 65 años o más?</option>
-                            <option value="Sí">Sí</option>
-                            <option value="No">No</option>
-                        </select>
+                        <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
+                            <p className="font-semibold">¿Es mayor de 65 años?</p>
 
-                        {form.mayor65 === "Sí" && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-slate-700">
-                                Antes de continuar, deberá consultar previamente por WhatsApp,
-                                ya que debe coordinarse un estudio particular requerido por la
-                                Superintendencia de Transporte de la Nación.
+                            <div className="grid grid-cols-2 gap-3">
+                                {["Sí", "No"].map((opcion) => (
+                                    <button
+                                        key={opcion}
+                                        type="button"
+                                        onClick={() =>
+                                            setForm({
+                                                ...form,
+                                                mayor65: opcion,
+                                            })
+                                        }
+                                        className={`border rounded-xl p-3 ${form.mayor65 === opcion
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : "bg-white"
+                                            }`}
+                                    >
+                                        {opcion}
+                                    </button>
+                                ))}
                             </div>
-                        )}
 
-                        <select
-                            className="w-full border rounded-xl p-3 bg-white"
-                            value={form.tieneLaboratorioReciente}
-                            onChange={(e) =>
-                                setForm({
-                                    ...form,
-                                    tieneLaboratorioReciente: e.target.value,
-                                })
-                            }
-                        >
-                            <option value="">
+                            {form.mayor65 === "Sí" && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
+                                    Los solicitantes mayores de 65 años pueden requerir
+                                    coordinación especial previa.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
+                            <p className="font-semibold">
                                 ¿Tiene estudios de laboratorio dentro de los últimos 60 días?
-                            </option>
-                            <option value="Sí">Sí</option>
-                            <option value="No">No</option>
-                        </select>
+                            </p>
 
-                        {form.tieneLaboratorioReciente === "Sí" && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-700">
-                                Deberá enviar los estudios al mail <strong>A DEFINIR</strong>.
-                                Desde allí se le indicará cómo continuar con el proceso.
+                            <div className="grid grid-cols-2 gap-3">
+                                {["Sí", "No"].map((opcion) => (
+                                    <button
+                                        key={opcion}
+                                        type="button"
+                                        onClick={() =>
+                                            setForm({
+                                                ...form,
+                                                tieneLaboratorioReciente: opcion,
+                                            })
+                                        }
+                                        className={`border rounded-xl p-3 ${form.tieneLaboratorioReciente === opcion
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : "bg-white"
+                                            }`}
+                                    >
+                                        {opcion}
+                                    </button>
+                                ))}
                             </div>
-                        )}
+
+                            {form.tieneLaboratorioReciente === "No" && form.locacion && (
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-slate-700">
+                                    Deberá presentarse a las <strong>07:00 hs</strong> para
+                                    realizar laboratorio.
+                                    <br />
+                                    <strong>Dirección laboratorio:</strong>{" "}
+                                    {direccionesLaboratorio[form.locacion]}
+                                    <br />
+                                    <strong>Indicaciones:</strong> ayuno mínimo de 8 horas.
+                                </div>
+                            )}
+
+                            {form.tieneLaboratorioReciente === "Sí" && (
+                                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-slate-700">
+                                    Deberá presentar los estudios de laboratorio realizados dentro
+                                    de los últimos 60 días.
+                                </div>
+                            )}
+                        </div>
 
                         <select
                             className="w-full border rounded-xl p-3 bg-white"
@@ -643,12 +706,28 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                             }
                         >
                             <option value="">Seleccione sede</option>
-                            {locaciones.map((l) => (
-                                <option key={l} value={l}>
-                                    {l}
+                            {locaciones.map((loc) => (
+                                <option key={loc} value={loc}>
+                                    {loc}
                                 </option>
                             ))}
                         </select>
+
+                        {form.locacion && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-700">
+                                <p>
+                                    <strong>Centro médico:</strong>{" "}
+                                    {direccionesCentroMedico[form.locacion]}
+                                </p>
+
+                                {form.tieneLaboratorioReciente === "No" && (
+                                    <p>
+                                        <strong>Laboratorio:</strong>{" "}
+                                        {direccionesLaboratorio[form.locacion]}
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         <input
                             type="date"
@@ -713,8 +792,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                             })
                                         }
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                            ? "bg-orange-500 text-white border-orange-500"
-                                            : estado.clases
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
@@ -756,8 +835,8 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                                 })
                                             }
                                             className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : "bg-white"
+                                                    ? "bg-orange-500 text-white border-orange-500"
+                                                    : "bg-white"
                                                 }`}
                                         >
                                             {metodo}
@@ -808,7 +887,7 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                 onClick={generarPreReserva}
                                 className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 disabled:bg-slate-300"
                             >
-                                {cargando ? "Guardando..." : "Generar pre-reserva"}
+                                {cargando ? "Guardando..." : "Solicitar turno"}
                             </button>
                         </div>
                     </div>
@@ -817,7 +896,7 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                 {paso === 3 && (
                     <div className="bg-white rounded-2xl p-6 shadow space-y-5">
                         <h2 className="text-xl font-semibold text-amber-700">
-                            Pre-reserva generada
+                            Solicitud generada
                         </h2>
 
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
@@ -900,6 +979,31 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                             </div>
                         </div>
 
+                        {form.tieneLaboratorioReciente === "No" && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm space-y-1">
+                                <h3 className="font-semibold text-blue-800">
+                                    Indicaciones de laboratorio
+                                </h3>
+                                <p>
+                                    Debe presentarse a las <strong>07:00 hs</strong>.
+                                </p>
+                                <p>
+                                    <strong>Dirección:</strong>{" "}
+                                    {direccionesLaboratorio[form.locacion]}
+                                </p>
+                                <p>
+                                    <strong>Indicaciones:</strong> ayuno mínimo de 8 horas.
+                                </p>
+                            </div>
+                        )}
+
+                        {form.tieneLaboratorioReciente === "Sí" && (
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
+                                Deberá presentar los estudios de laboratorio realizados dentro
+                                de los últimos 60 días.
+                            </div>
+                        )}
+
                         <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
                             <p>
                                 <strong>Tipo de turno:</strong> Licencia Profesional
@@ -914,48 +1018,25 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                                 <strong>Celular:</strong> {form.celular}
                             </p>
                             <p>
-                                <strong>Fecha:</strong> {form.fecha}
+                                <strong>Mayor de 65:</strong> {form.mayor65}
                             </p>
                             <p>
-                                <strong>Horario centro médico:</strong> {form.horario}
+                                <strong>Laboratorio reciente:</strong>{" "}
+                                {form.tieneLaboratorioReciente}
                             </p>
                             <p>
                                 <strong>Sede:</strong> {form.locacion}
                             </p>
                             <p>
-                                <strong>Dirección centro médico:</strong>{" "}
+                                <strong>Dirección:</strong>{" "}
                                 {direccionesCentroMedico[form.locacion]}
                             </p>
-
-                            {form.tieneLaboratorioReciente === "No" && (
-                                <>
-                                    <p>
-                                        <strong>Laboratorio:</strong> 07:00 hs
-                                    </p>
-                                    <p>
-                                        <strong>Dirección laboratorio:</strong>{" "}
-                                        {direccionesLaboratorio[form.locacion]}
-                                    </p>
-                                    <p>
-                                        <strong>Ayuno mínimo:</strong> 8 horas
-                                    </p>
-                                </>
-                            )}
-
-                            {form.tieneLaboratorioReciente === "Sí" && (
-                                <p>
-                                    <strong>Laboratorio:</strong> Usted indicó que posee estudios
-                                    realizados dentro de los últimos 60 días.
-                                </p>
-                            )}
-
-                            {form.mayor65 === "Sí" && (
-                                <p className="text-red-700 font-medium">
-                                    Atención: requiere coordinación especial previa por ser mayor
-                                    de 65 años.
-                                </p>
-                            )}
-
+                            <p>
+                                <strong>Fecha:</strong> {form.fecha}
+                            </p>
+                            <p>
+                                <strong>Horario:</strong> {form.horario}
+                            </p>
                             <p>
                                 <strong>Estado:</strong> Pendiente de pago
                             </p>
@@ -965,7 +1046,7 @@ Si el comprobante no se recibe antes del vencimiento indicado, la pre-reserva po
                             onClick={reiniciarFormulario}
                             className="w-full border rounded-xl p-3"
                         >
-                            Nueva pre-reserva
+                            Nueva solicitud
                         </button>
                     </div>
                 )}
