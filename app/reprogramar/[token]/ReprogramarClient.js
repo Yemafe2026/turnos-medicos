@@ -163,9 +163,12 @@ export default function ReprogramarClient({ token }) {
         ]);
 
         if (insertError) {
-            console.error(insertError);
+            console.error("Error insertando reprogramación:", insertError);
             setGuardando(false);
-            setError("No se pudo generar la reprogramación.");
+            setError(
+                `No se pudo generar la reprogramación: ${insertError?.message || "Error desconocido"
+                }`
+            );
             return;
         }
 
@@ -332,8 +335,8 @@ export default function ReprogramarClient({ token }) {
                                         disabled={estado.bloqueado}
                                         onClick={() => setHorario(hora)}
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : estado.clases
+                                            ? "bg-orange-500 text-white border-orange-500"
+                                            : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
