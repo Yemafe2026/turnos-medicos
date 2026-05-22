@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../supabase";
+import { useParams } from "next/navigation";
 
 const horariosParticular = [
     "08:00", "08:20", "08:40",
@@ -34,8 +35,9 @@ function esHorarioLiberado(estado) {
     );
 }
 
-export default function ReprogramarTurnoPage({ params }) {
-    const token = params.token;
+export default function ReprogramarTurnoPage() {
+    const params = useParams();
+    const token = params?.token;
 
     const [cargando, setCargando] = useState(true);
     const [guardando, setGuardando] = useState(false);
@@ -91,8 +93,10 @@ export default function ReprogramarTurnoPage({ params }) {
     };
 
     useEffect(() => {
-        cargarTurnoOriginal();
-    }, []);
+        if (token) {
+            cargarTurnoOriginal();
+        }
+    }, [token]);
 
     useEffect(() => {
         cargarTurnosExistentes();
@@ -322,8 +326,8 @@ export default function ReprogramarTurnoPage({ params }) {
                                         disabled={estado.bloqueado}
                                         onClick={() => setHorario(hora)}
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : estado.clases
+                                            ? "bg-orange-500 text-white border-orange-500"
+                                            : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
