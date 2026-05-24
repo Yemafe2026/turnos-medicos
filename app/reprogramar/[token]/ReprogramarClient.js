@@ -131,36 +131,45 @@ export default function ReprogramarClient({ token }) {
     const confirmarReprogramacion = async () => {
         setError("");
 
-        if (!turnoOriginal || !fecha || !horario) {
+        if (!turnoOriginal) {
+            setError("No se encontró el turno original.");
+            return;
+        }
+
+        if (!fecha || !horario) {
             setError("Seleccione fecha y horario para reprogramar.");
             return;
         }
 
         setGuardando(true);
 
-        const { error: insertError } = await supabase.from("turnos").insert([
-            {
-                tipo_turno: turnoOriginal.tipo_turno,
-                nombre: turnoOriginal.nombre,
-                dni: turnoOriginal.dni,
-                celular: turnoOriginal.celular,
-                locacion: turnoOriginal.locacion,
-                fecha,
-                horario,
-                estado: "Reprogramado",
-                pagado: true,
-                metodo_pago: turnoOriginal.metodo_pago || "Reprogramación",
-                comprobante_recibido: true,
-                turno_original_id: turnoOriginal.id,
-                es_reprogramacion: true,
-                penalidad_pendiente: true,
-                penalidad_pagada: false,
-                penalidad_porcentaje: 30,
-                mayor65: turnoOriginal.mayor65 || "No aplica",
-                laboratorio_reciente:
-                    turnoOriginal.laboratorio_reciente || "No aplica",
-            },
-        ]);
+        const { error: insertError } = await supabase
+            .from("turnos")
+            .insert([
+                {
+                    tipo_turno: turnoOriginal.tipo_turno || "Carnet Profesional",
+                    nombre: turnoOriginal.nombre || "",
+                    dni: turnoOriginal.dni || "",
+                    celular: turnoOriginal.celular || "",
+                    locacion: turnoOriginal.locacion || "",
+                    fecha,
+                    horario,
+                    estado: "Reprogramado",
+                    pagado: true,
+                    metodo_pago: turnoOriginal.metodo_pago || "Reprogramación",
+                    comprobante_recibido: true,
+                    turno_original_id: turnoOriginal.id,
+                    es_reprogramacion: true,
+                    penalidad_pendiente: true,
+                    penalidad_pagada: false,
+                    penalidad_porcentaje: 30,
+                    mayor65: turnoOriginal.mayor65 || "No aplica",
+                    laboratorio_reciente:
+                        turnoOriginal.laboratorio_reciente || "No aplica",
+                },
+            ])
+            .select()
+            .single();
 
         if (insertError) {
             console.error("Error insertando reprogramación:", insertError);
@@ -172,12 +181,22 @@ export default function ReprogramarClient({ token }) {
             return;
         }
 
-        await supabase
+        const { error: updateError } = await supabase
             .from("turnos")
             .update({
                 reprogramado_at: new Date().toISOString(),
             })
             .eq("id", turnoOriginal.id);
+
+        if (updateError) {
+            console.error("Error actualizando turno original:", updateError);
+            setGuardando(false);
+            setError(
+                `El nuevo turno se creó, pero no se pudo actualizar el turno original: ${updateError?.message || "Error desconocido"
+                }`
+            );
+            return;
+        }
 
         setGuardando(false);
         setReprogramado(true);
@@ -335,8 +354,8 @@ export default function ReprogramarClient({ token }) {
                                         disabled={estado.bloqueado}
                                         onClick={() => setHorario(hora)}
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                            ? "bg-orange-500 text-white border-orange-500"
-                                            : estado.clases
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
