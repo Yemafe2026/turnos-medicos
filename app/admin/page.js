@@ -159,6 +159,22 @@ Te esperamos.`,
     cargarTurnos();
   };
 
+  const confirmarPenalidad = async (turno) => {
+    if (!turno.penalidad_pendiente || turno.penalidad_pagada) return;
+
+    await supabase
+      .from("turnos")
+      .update({
+        penalidad_pagada: true,
+        penalidad_pendiente: false,
+        penalidad_confirmada_at: new Date().toISOString(),
+        estado: "Confirmado",
+      })
+      .eq("id", turno.id);
+
+    cargarTurnos();
+  };
+
   const marcarRealizado = async (turno) => {
     if (turno.estado !== "Confirmado") return;
 
@@ -214,7 +230,6 @@ Te esperamos.`,
 
     cargarTurnos();
   };
-
   const turnosFiltrados = useMemo(() => {
     return turnos.filter((t) => {
       const tipo = t.tipo_turno || "Carnet Profesional";
@@ -343,7 +358,13 @@ Te esperamos.`,
                 const puedeConfirmarPago =
                   t.comprobante_recibido && !pagoConfirmado && !finalizado;
 
-                const puedeMarcarAsistencia = estaConfirmado && !finalizado;
+                const puedeConfirmarPenalidad =
+                  t.estado === "Reprogramado" &&
+                  t.penalidad_pendiente &&
+                  !t.penalidad_pagada;
+
+                const puedeMarcarAsistencia =
+                  estaConfirmado && !finalizado;
 
                 return (
                   <tr key={t.id} className="border-b align-top">
@@ -352,15 +373,10 @@ Te esperamos.`,
                     </td>
 
                     <td className="p-3">{t.locacion || "-"}</td>
-
                     <td className="p-3">{t.fecha}</td>
-
                     <td className="p-3 font-semibold">{t.horario}</td>
-
                     <td className="p-3">{t.nombre}</td>
-
                     <td className="p-3">{t.dni || "-"}</td>
-
                     <td className="p-3">{t.celular}</td>
 
                     <td className="p-3">
@@ -429,6 +445,19 @@ Te esperamos.`,
                           {pagoConfirmado
                             ? "Pago confirmado"
                             : "Confirmar pago"}
+                        </button>
+
+                        <button
+                          onClick={() => confirmarPenalidad(t)}
+                          disabled={!puedeConfirmarPenalidad}
+                          className={`px-3 py-2 rounded-xl text-xs text-white ${puedeConfirmarPenalidad
+                              ? "bg-purple-600 hover:bg-purple-700"
+                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            }`}
+                        >
+                          {t.penalidad_pagada
+                            ? "Penalidad pagada"
+                            : "Confirmar penalidad"}
                         </button>
                       </div>
                     </td>
