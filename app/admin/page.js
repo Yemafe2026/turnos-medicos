@@ -192,6 +192,39 @@ Te esperamos.`,
   const marcarAusente = async (turno) => {
     if (turno.estado !== "Confirmado") return;
 
+    const esSegundaAusencia =
+      turno.es_reprogramacion === true && turno.penalidad_pagada === true;
+
+    if (esSegundaAusencia) {
+      await supabase
+        .from("turnos")
+        .update({
+          estado: "Ausente",
+          ausente: true,
+          segunda_ausencia: true,
+          segunda_ausencia_at: new Date().toISOString(),
+        })
+        .eq("id", turno.id);
+
+      await fetch("/api/whatsapp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          telefono: formatearTelefonoWhatsApp(turno.celular),
+          mensaje: `Hola ${turno.nombre}, registramos que no se presentó por segunda vez a su turno.
+
+Para solicitar una nueva atención deberá iniciar una nueva reserva desde el comienzo y abonar la totalidad del estudio correspondiente.
+
+Gracias.`,
+        }),
+      });
+
+      cargarTurnos();
+      return;
+    }
+
     const tokenReprogramacion =
       turno.token_reprogramacion || generarTokenReprogramacion();
 
@@ -421,10 +454,10 @@ Te esperamos.`,
                           onClick={() => marcarComprobanteRecibido(t)}
                           disabled={!puedeRecibirComprobante}
                           className={`px-3 py-2 rounded-xl text-xs ${t.comprobante_recibido
-                              ? "bg-green-200 text-green-800 cursor-not-allowed"
-                              : puedeRecibirComprobante
-                                ? "bg-amber-500 hover:bg-amber-600 text-white"
-                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            ? "bg-green-200 text-green-800 cursor-not-allowed"
+                            : puedeRecibirComprobante
+                              ? "bg-amber-500 hover:bg-amber-600 text-white"
+                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.comprobante_recibido
@@ -436,10 +469,10 @@ Te esperamos.`,
                           onClick={() => confirmarPago(t)}
                           disabled={!puedeConfirmarPago}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${pagoConfirmado
-                              ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                              : puedeConfirmarPago
-                                ? "bg-green-600 hover:bg-green-700"
-                                : "bg-slate-300 cursor-not-allowed opacity-60"
+                            ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            : puedeConfirmarPago
+                              ? "bg-green-600 hover:bg-green-700"
+                              : "bg-slate-300 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {pagoConfirmado
@@ -451,8 +484,8 @@ Te esperamos.`,
                           onClick={() => confirmarPenalidad(t)}
                           disabled={!puedeConfirmarPenalidad}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${puedeConfirmarPenalidad
-                              ? "bg-purple-600 hover:bg-purple-700"
-                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            ? "bg-purple-600 hover:bg-purple-700"
+                            : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.penalidad_pagada
@@ -468,10 +501,10 @@ Te esperamos.`,
                           onClick={() => marcarRealizado(t)}
                           disabled={!puedeMarcarAsistencia}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Realizado"
-                              ? "bg-blue-200 text-blue-800 cursor-not-allowed"
-                              : puedeMarcarAsistencia
-                                ? "bg-blue-600 hover:bg-blue-700"
-                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            ? "bg-blue-200 text-blue-800 cursor-not-allowed"
+                            : puedeMarcarAsistencia
+                              ? "bg-blue-600 hover:bg-blue-700"
+                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.estado === "Realizado"
@@ -483,10 +516,10 @@ Te esperamos.`,
                           onClick={() => marcarAusente(t)}
                           disabled={!puedeMarcarAsistencia}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Ausente"
-                              ? "bg-slate-400 cursor-not-allowed"
-                              : puedeMarcarAsistencia
-                                ? "bg-slate-700 hover:bg-slate-800"
-                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            ? "bg-slate-400 cursor-not-allowed"
+                            : puedeMarcarAsistencia
+                              ? "bg-slate-700 hover:bg-slate-800"
+                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.estado === "Ausente"
