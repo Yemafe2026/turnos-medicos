@@ -152,7 +152,11 @@ Fecha del Turno: ${turno.fecha}
 Horario del Turno: ${turno.horario}
 Sede: ${turno.locacion}
 
-Te esperamos.`,
+Te esperamos.
+
+Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.
+
+Este número automático es solo informativo y no está habilitado para recibir respuestas.`,
       }),
     });
 
@@ -217,7 +221,9 @@ Te esperamos.`,
 
 Para solicitar una nueva atención deberá iniciar una nueva reserva desde el comienzo y abonar la totalidad del estudio correspondiente.
 
-Gracias.`,
+Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.
+
+Este número automático es solo informativo y no está habilitado para recibir respuestas.`,
         }),
       });
 
