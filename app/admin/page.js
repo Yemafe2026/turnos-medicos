@@ -20,12 +20,12 @@ const tiposTurno = ["Todos", "Carnet Profesional", "Licencia Particular"];
 const mediosPagoReal = ["Transferencia", "Post Net", "Efectivo"];
 
 function badgeEstado(estado) {
-  if (estado === "Confirmado") return "bg-green-100 text-green-800";
-  if (estado === "Realizado") return "bg-blue-100 text-blue-800";
-  if (estado === "Ausente") return "bg-slate-200 text-slate-800";
-  if (estado === "No Confirmado") return "bg-red-100 text-red-800";
-  if (estado === "Reprogramado") return "bg-purple-100 text-purple-800";
-  return "bg-amber-100 text-amber-800";
+  if (estado === "Confirmado") return "bg-green-100 text-green-800 border-green-200";
+  if (estado === "Realizado") return "bg-blue-100 text-blue-800 border-blue-200";
+  if (estado === "Ausente") return "bg-red-100 text-red-800 border-red-200";
+  if (estado === "No Confirmado") return "bg-red-100 text-red-800 border-red-200";
+  if (estado === "Reprogramado") return "bg-purple-100 text-purple-800 border-purple-200";
+  return "bg-amber-100 text-amber-800 border-amber-200";
 }
 
 function esEstadoFinal(estado) {
@@ -39,12 +39,10 @@ function generarTokenReprogramacion() {
 
 function formatearTelefonoWhatsApp(celular) {
   const limpio = String(celular || "").replace(/\D/g, "");
-
   if (limpio.startsWith("54")) return limpio;
   if (limpio.startsWith("29915")) return `54${limpio}`;
   if (limpio.startsWith("299")) return `5429915${limpio.slice(3)}`;
   if (limpio.startsWith("15")) return `54299${limpio}`;
-
   return limpio;
 }
 
@@ -278,12 +276,19 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
     });
   }, [turnos, filtroEstado, filtroSede, filtroFecha, filtroTipo, busqueda]);
 
+  const limpiarFiltros = () => {
+    setBusqueda("");
+    setFiltroEstado("Todos");
+    setFiltroSede("Todas");
+    setFiltroFecha("");
+    setFiltroTipo("Todos");
+  };
   return (
-    <main className="p-6 bg-slate-100 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="bg-white p-6 rounded-2xl shadow flex justify-between items-center">
+    <main className="p-4 bg-slate-100 min-h-screen">
+      <div className="w-full mx-auto space-y-4">
+        <div className="bg-white p-4 rounded-2xl shadow flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <img src="/logo.png" alt="Laboral Salud" className="h-14" />
+            <img src="/logo.png" alt="Laboral Salud" className="h-12" />
 
             <div>
               <h1 className="text-2xl font-bold">Panel Administrativo</h1>
@@ -293,273 +298,338 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
             </div>
           </div>
 
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.push("/admin/login");
-            }}
-            className="bg-orange-500 text-white px-4 py-2 rounded-xl"
-          >
-            Salir
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={cargarTurnos}
+              className="bg-white border px-4 py-2 rounded-xl text-sm hover:bg-slate-50"
+            >
+              Actualizar
+            </button>
+
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.push("/admin/login");
+              }}
+              className="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm"
+            >
+              Salir
+            </button>
+          </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl shadow grid md:grid-cols-5 gap-3">
-          <input
-            placeholder="Buscar por paciente, DNI, celular, sede o beneficio"
-            className="border p-2 rounded-xl"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+        <div className="bg-white p-4 rounded-2xl shadow grid md:grid-cols-6 gap-3 items-end">
+          <div className="md:col-span-2">
+            <label className="text-xs text-slate-500">Buscar</label>
+            <input
+              placeholder="Paciente, DNI, celular, sede o beneficio"
+              className="border p-2 rounded-xl w-full"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+            />
+          </div>
 
-          <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value)}
-            className="border p-2 rounded-xl bg-white"
-          >
-            {tiposTurno.map((t) => (
-              <option key={t}>{t}</option>
-            ))}
-          </select>
+          <div>
+            <label className="text-xs text-slate-500">Tipo</label>
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value)}
+              className="border p-2 rounded-xl bg-white w-full"
+            >
+              {tiposTurno.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </div>
 
-          <select
-            value={filtroEstado}
-            onChange={(e) => setFiltroEstado(e.target.value)}
-            className="border p-2 rounded-xl bg-white"
-          >
-            {estados.map((e) => (
-              <option key={e}>{e}</option>
-            ))}
-          </select>
+          <div>
+            <label className="text-xs text-slate-500">Estado</label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="border p-2 rounded-xl bg-white w-full"
+            >
+              {estados.map((e) => (
+                <option key={e}>{e}</option>
+              ))}
+            </select>
+          </div>
 
-          <select
-            value={filtroSede}
-            onChange={(e) => setFiltroSede(e.target.value)}
-            className="border p-2 rounded-xl bg-white"
-          >
-            {sedes.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
+          <div>
+            <label className="text-xs text-slate-500">Sede</label>
+            <select
+              value={filtroSede}
+              onChange={(e) => setFiltroSede(e.target.value)}
+              className="border p-2 rounded-xl bg-white w-full"
+            >
+              {sedes.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </div>
 
-          <input
-            type="date"
-            value={filtroFecha}
-            onChange={(e) => setFiltroFecha(e.target.value)}
-            className="border p-2 rounded-xl"
-          />
+          <div>
+            <label className="text-xs text-slate-500">Fecha</label>
+            <input
+              type="date"
+              value={filtroFecha}
+              onChange={(e) => setFiltroFecha(e.target.value)}
+              className="border p-2 rounded-xl w-full"
+            />
+          </div>
+
+          <div className="md:col-span-6 flex justify-between items-center pt-1">
+            <p className="text-xs text-slate-500">
+              Mostrando {turnosFiltrados.length} turno
+              {turnosFiltrados.length === 1 ? "" : "s"}
+            </p>
+
+            <button
+              onClick={limpiarFiltros}
+              className="text-xs border px-3 py-2 rounded-xl hover:bg-slate-50"
+            >
+              Limpiar filtros
+            </button>
+          </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl shadow overflow-auto max-h-[75vh]">
-          {cargando && <p>Cargando...</p>}
+        <div className="space-y-3">
+          {cargando && (
+            <div className="bg-white p-4 rounded-2xl shadow text-sm">
+              Cargando...
+            </div>
+          )}
 
-          <table className="min-w-[1600px] w-full text-[11px]">
-            <thead>
-              <tr className="bg-slate-50 border-b text-left">
-                <th className="p-3">Tipo</th>
-                <th className="p-3">Locación</th>
-                <th className="p-3">Fecha</th>
-                <th className="p-3">Hora</th>
-                <th className="p-3">Paciente</th>
-                <th className="p-3">DNI</th>
-                <th className="p-3">Celular</th>
-                <th className="p-3">Estado</th>
-                <th className="p-3">Pago</th>
-                <th className="p-3">Método elegido</th>
-                <th className="p-3">Medio real</th>
-                <th className="p-3">Beneficio</th>
-                <th className="p-3">Importe</th>
-                <th className="p-3">Penalidad</th>
-                <th className="p-3">Acciones</th>
-                <th className="p-3">Asistencia</th>
-              </tr>
-            </thead>
+          {!cargando &&
+            turnosFiltrados.map((t) => {
+              const estadoActual = t.estado || "Pendiente de pago";
+              const estaConfirmado = t.estado === "Confirmado";
+              const pagoConfirmado = t.pagado || t.estado === "Confirmado";
+              const finalizado = esEstadoFinal(t.estado);
 
-            <tbody>
-              {turnosFiltrados.map((t) => {
-                const estaConfirmado = t.estado === "Confirmado";
-                const pagoConfirmado = t.pagado || t.estado === "Confirmado";
-                const finalizado = esEstadoFinal(t.estado);
+              const puedeConfirmarPago = !pagoConfirmado && !finalizado;
 
-                const puedeConfirmarPago = !pagoConfirmado && !finalizado;
+              const puedeConfirmarPenalidad =
+                t.estado === "Reprogramado" &&
+                t.penalidad_pendiente &&
+                !t.penalidad_pagada;
 
-                const puedeConfirmarPenalidad =
-                  t.estado === "Reprogramado" &&
-                  t.penalidad_pendiente &&
-                  !t.penalidad_pagada;
+              const puedeMarcarAsistencia = estaConfirmado && !finalizado;
 
-                const puedeMarcarAsistencia = estaConfirmado && !finalizado;
+              const beneficio = mostrarBeneficio(t);
+              const tieneBeneficio = beneficio !== "Estándar";
 
-                const beneficio = mostrarBeneficio(t);
-                const tieneBeneficio = beneficio !== "Estándar";
+              return (
+                <div
+                  key={t.id}
+                  className="bg-white rounded-2xl shadow border border-slate-100 p-4"
+                >
+                  <div className="grid grid-cols-12 gap-4 items-stretch">
+                    <div className="col-span-12 md:col-span-2 border-r md:pr-4 flex gap-3 items-center">
+                      <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center text-xl font-bold">
+                        {(t.nombre || "?").charAt(0).toUpperCase()}
+                      </div>
 
-                return (
-                  <tr key={t.id} className="border-b align-top">
-                    <td className="p-3">
-                      {t.tipo_turno || "Carnet Profesional"}
-                    </td>
+                      <div>
+                        <p className="font-bold text-slate-900">
+                          {t.nombre || "-"}
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          DNI: {t.dni || "-"}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          {t.celular || "-"}
+                        </p>
+                      </div>
+                    </div>
 
-                    <td className="p-3">{t.locacion || "-"}</td>
-                    <td className="p-3">{t.fecha}</td>
-                    <td className="p-3 font-semibold">{t.horario}</td>
-                    <td className="p-3">{t.nombre}</td>
-                    <td className="p-3">{t.dni || "-"}</td>
-                    <td className="p-3">{t.celular}</td>
+                    <div className="col-span-12 md:col-span-2 border-r md:pr-4 space-y-1 text-sm">
+                      <p>
+                        <span className="font-semibold">Tipo:</span>{" "}
+                        {t.tipo_turno || "Carnet Profesional"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Sede:</span>{" "}
+                        {t.locacion || "-"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Fecha:</span>{" "}
+                        {t.fecha || "-"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Hora:</span>{" "}
+                        {t.horario || "-"}
+                      </p>
+                    </div>
 
-                    <td className="p-3">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${badgeEstado(
-                          t.estado
-                        )}`}
-                      >
-                        {t.estado || "Pendiente de pago"}
-                      </span>
-                    </td>
-
-                    <td className="p-3">
-                      {pagoConfirmado ? (
-                        <span className="text-green-700 font-semibold">
-                          Pagado
-                        </span>
-                      ) : (
-                        <span className="text-red-700 font-semibold">
-                          No pagado
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="p-3">{t.metodo_pago || "-"}</td>
-
-                    <td className="p-3">
-                      {t.medio_pago_real ? (
-                        <span className="text-green-700 font-semibold">
-                          {t.medio_pago_real}
-                        </span>
-                      ) : puedeConfirmarPago ? (
-                        <select
-                          className="border rounded-xl p-2 text-xs bg-white"
-                          value={medioPagoRealPorTurno[t.id] || ""}
-                          onChange={(e) =>
-                            setMedioPagoRealPorTurno({
-                              ...medioPagoRealPorTurno,
-                              [t.id]: e.target.value,
-                            })
-                          }
+                    <div className="col-span-12 md:col-span-2 border-r md:pr-4 space-y-2 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-500">Estado</p>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full border text-xs font-semibold ${badgeEstado(
+                            estadoActual
+                          )}`}
                         >
-                          <option value="">Seleccionar</option>
-                          {mediosPagoReal.map((medio) => (
-                            <option key={medio} value={medio}>
-                              {medio}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
-
-                    <td className="p-3">
-                      {tieneBeneficio ? (
-                        <span className="text-purple-700 font-semibold">
-                          {beneficio}
+                          {estadoActual}
                         </span>
-                      ) : (
-                        <span className="text-slate-600">Estándar</span>
-                      )}
-                    </td>
+                      </div>
 
-                    <td className="p-3 font-semibold">
-                      {formatearImporte(t.importe_servicio)}
-                    </td>
+                      <div>
+                        <p className="text-xs text-slate-500">Pago</p>
+                        {pagoConfirmado ? (
+                          <span className="text-green-700 font-semibold">
+                            Pagado
+                          </span>
+                        ) : (
+                          <span className="text-red-700 font-semibold">
+                            No pagado
+                          </span>
+                        )}
+                      </div>
 
-                    <td className="p-3">
-                      {t.penalidad_pendiente && !t.penalidad_pagada ? (
-                        <span className="text-red-700 font-semibold">
-                          30% pendiente
-                        </span>
-                      ) : t.penalidad_pagada ? (
-                        <span className="text-green-700 font-semibold">
-                          Penalidad pagada
-                        </span>
-                      ) : (
-                        <span className="text-slate-400">-</span>
-                      )}
-                    </td>
+                      <div>
+                        <p className="text-xs text-slate-500">
+                          Método elegido
+                        </p>
+                        <p className="font-semibold">
+                          {t.metodo_pago || "-"}
+                        </p>
+                      </div>
 
-                    <td className="p-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => confirmarPago(t)}
-                          disabled={!puedeConfirmarPago}
-                          className={`px-3 py-2 rounded-xl text-xs text-white ${pagoConfirmado
-                            ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                      <div>
+                        <p className="text-xs text-slate-500">Medio real</p>
+                        {t.medio_pago_real ? (
+                          <p className="text-green-700 font-semibold">
+                            {t.medio_pago_real}
+                          </p>
+                        ) : puedeConfirmarPago ? (
+                          <select
+                            className="border rounded-xl p-2 text-xs bg-white w-full"
+                            value={medioPagoRealPorTurno[t.id] || ""}
+                            onChange={(e) =>
+                              setMedioPagoRealPorTurno({
+                                ...medioPagoRealPorTurno,
+                                [t.id]: e.target.value,
+                              })
+                            }
+                          >
+                            <option value="">Seleccionar</option>
+                            {mediosPagoReal.map((medio) => (
+                              <option key={medio} value={medio}>
+                                {medio}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="col-span-12 md:col-span-2 border-r md:pr-4 space-y-2 text-sm">
+                      <div>
+                        <p className="text-xs text-slate-500">Beneficio</p>
+                        {tieneBeneficio ? (
+                          <p className="text-purple-700 font-bold">
+                            {beneficio}
+                          </p>
+                        ) : (
+                          <p className="font-semibold text-slate-700">
+                            Estándar
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-slate-500">Importe</p>
+                        <p className="text-xl font-bold">
+                          {formatearImporte(t.importe_servicio)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-slate-500">Penalidad</p>
+                        {t.penalidad_pendiente && !t.penalidad_pagada ? (
+                          <span className="text-red-700 font-semibold">
+                            30% pendiente
+                          </span>
+                        ) : t.penalidad_pagada ? (
+                          <span className="text-green-700 font-semibold">
+                            Penalidad pagada
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="col-span-12 md:col-span-2 border-r md:pr-4 flex flex-col gap-2 justify-center">
+                      <button
+                        onClick={() => confirmarPago(t)}
+                        disabled={!puedeConfirmarPago}
+                        className={`px-3 py-2 rounded-xl text-sm font-semibold ${pagoConfirmado
+                            ? "bg-green-100 text-green-800 cursor-not-allowed"
                             : puedeConfirmarPago
-                              ? "bg-green-600 hover:bg-green-700"
-                              : "bg-slate-300 cursor-not-allowed opacity-60"
-                            }`}
-                        >
-                          {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
-                        </button>
+                              ? "bg-green-600 hover:bg-green-700 text-white"
+                              : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          }`}
+                      >
+                        {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
+                      </button>
 
-                        <button
-                          onClick={() => confirmarPenalidad(t)}
-                          disabled={!puedeConfirmarPenalidad}
-                          className={`px-3 py-2 rounded-xl text-xs text-white ${puedeConfirmarPenalidad
-                            ? "bg-purple-600 hover:bg-purple-700"
-                            : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                            }`}
-                        >
-                          {t.penalidad_pagada
-                            ? "Penalidad pagada"
-                            : "Confirmar penalidad"}
-                        </button>
-                      </div>
-                    </td>
+                      <button
+                        onClick={() => confirmarPenalidad(t)}
+                        disabled={!puedeConfirmarPenalidad}
+                        className={`px-3 py-2 rounded-xl text-sm font-semibold ${puedeConfirmarPenalidad
+                            ? "bg-purple-600 hover:bg-purple-700 text-white"
+                            : "bg-purple-100 text-purple-300 cursor-not-allowed"
+                          }`}
+                      >
+                        {t.penalidad_pagada
+                          ? "Penalidad pagada"
+                          : "Confirmar penalidad"}
+                      </button>
+                    </div>
 
-                    <td className="p-3">
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => marcarRealizado(t)}
-                          disabled={!puedeMarcarAsistencia}
-                          className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Realizado"
-                            ? "bg-blue-200 text-blue-800 cursor-not-allowed"
+                    <div className="col-span-12 md:col-span-2 flex flex-col gap-2 justify-center">
+                      <button
+                        onClick={() => marcarRealizado(t)}
+                        disabled={!puedeMarcarAsistencia}
+                        className={`px-3 py-2 rounded-xl text-sm font-semibold ${t.estado === "Realizado"
+                            ? "bg-blue-100 text-blue-800 cursor-not-allowed"
                             : puedeMarcarAsistencia
-                              ? "bg-blue-600 hover:bg-blue-700"
-                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                            }`}
-                        >
-                          {t.estado === "Realizado"
-                            ? "✔ Se presentó"
-                            : "Se presentó"}
-                        </button>
+                              ? "bg-blue-600 hover:bg-blue-700 text-white"
+                              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          }`}
+                      >
+                        {t.estado === "Realizado" ? "✔ Se presentó" : "Se presentó"}
+                      </button>
 
-                        <button
-                          onClick={() => marcarAusente(t)}
-                          disabled={!puedeMarcarAsistencia}
-                          className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Ausente"
-                            ? "bg-slate-400 cursor-not-allowed"
+                      <button
+                        onClick={() => marcarAusente(t)}
+                        disabled={!puedeMarcarAsistencia}
+                        className={`px-3 py-2 rounded-xl text-sm font-semibold ${t.estado === "Ausente"
+                            ? "bg-slate-400 text-white cursor-not-allowed"
                             : puedeMarcarAsistencia
-                              ? "bg-slate-700 hover:bg-slate-800"
-                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                            }`}
-                        >
-                          {t.estado === "Ausente" ? "✔ Ausente" : "No se presentó"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                              ? "bg-slate-800 hover:bg-slate-900 text-white"
+                              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          }`}
+                      >
+                        {t.estado === "Ausente" ? "✔ Ausente" : "No se presentó"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
 
           {!cargando && turnosFiltrados.length === 0 && (
-            <p className="text-sm text-slate-500 mt-4">
+            <div className="bg-white p-6 rounded-2xl shadow text-sm text-slate-500">
               No hay turnos para los filtros seleccionados.
-            </p>
+            </div>
           )}
         </div>
       </div>
     </main>
   );
-}
+} 
