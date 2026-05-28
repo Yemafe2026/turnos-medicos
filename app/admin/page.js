@@ -17,6 +17,7 @@ const estados = [
 ];
 
 const tiposTurno = ["Todos", "Carnet Profesional", "Licencia Particular"];
+const mediosPagoReal = ["Transferencia", "Post Net", "Efectivo"];
 
 function badgeEstado(estado) {
   if (estado === "Confirmado") return "bg-green-100 text-green-800";
@@ -45,18 +46,9 @@ function formatearTelefonoWhatsApp(celular) {
   const limpio = String(celular || "").replace(/\D/g, "");
 
   if (limpio.startsWith("54")) return limpio;
-
-  if (limpio.startsWith("29915")) {
-    return `54${limpio}`;
-  }
-
-  if (limpio.startsWith("299")) {
-    return `5429915${limpio.slice(3)}`;
-  }
-
-  if (limpio.startsWith("15")) {
-    return `54299${limpio}`;
-  }
+  if (limpio.startsWith("29915")) return `54${limpio}`;
+  if (limpio.startsWith("299")) return `5429915${limpio.slice(3)}`;
+  if (limpio.startsWith("15")) return `54299${limpio}`;
 
   return limpio;
 }
@@ -72,6 +64,7 @@ export default function AdminPage() {
   const [filtroSede, setFiltroSede] = useState("Todas");
   const [filtroFecha, setFiltroFecha] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("Todos");
+  const [medioPagoRealPorTurno, setMedioPagoRealPorTurno] = useState({});
 
   const cargarTurnos = async () => {
     setCargando(true);
@@ -121,6 +114,8 @@ export default function AdminPage() {
   };
 
   const confirmarPago = async (turno) => {
+    const medioPagoReal = medioPagoRealPorTurno[turno.id];
+
     if (
       turno.pagado ||
       turno.estado === "Confirmado" ||
@@ -130,11 +125,17 @@ export default function AdminPage() {
       return;
     }
 
+    if (!medioPagoReal) {
+      alert("Seleccione el medio real de pago antes de confirmar.");
+      return;
+    }
+
     await supabase
       .from("turnos")
       .update({
         pagado: true,
         estado: "Confirmado",
+        medio_pago_real: medioPagoReal,
         pago_confirmado_at: new Date().toISOString(),
       })
       .eq("id", turno.id);
@@ -154,9 +155,7 @@ Sede: ${turno.locacion}
 
 Te esperamos.
 
-Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.
-
-Este número automático es solo informativo y no está habilitado para recibir respuestas.`,
+Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.`,
       }),
     });
 
@@ -221,9 +220,7 @@ Este número automático es solo informativo y no está habilitado para recibir 
 
 Para solicitar una nueva atención deberá iniciar una nueva reserva desde el comienzo y abonar la totalidad del estudio correspondiente.
 
-Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.
-
-Este número automático es solo informativo y no está habilitado para recibir respuestas.`,
+Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.`,
         }),
       });
 
@@ -269,6 +266,7 @@ Este número automático es solo informativo y no está habilitado para recibir 
 
     cargarTurnos();
   };
+
   const turnosFiltrados = useMemo(() => {
     return turnos.filter((t) => {
       const tipo = t.tipo_turno || "Carnet Profesional";
@@ -379,6 +377,8 @@ Este número automático es solo informativo y no está habilitado para recibir 
                 <th className="p-3">Celular</th>
                 <th className="p-3">Estado</th>
                 <th className="p-3">Pago</th>
+                <th className="p-3">Método elegido</th>
+                <th className="p-3">Medio real</th>
                 <th className="p-3">Penalidad</th>
                 <th className="p-3">Acciones</th>
                 <th className="p-3">Asistencia</th>
@@ -440,6 +440,36 @@ Este número automático es solo informativo y no está habilitado para recibir 
                       )}
                     </td>
 
+                    <td className="p-3">{t.metodo_pago || "-"}</td>
+
+                    <td className="p-3">
+                      {t.medio_pago_real ? (
+                        <span className="text-green-700 font-semibold">
+                          {t.medio_pago_real}
+                        </span>
+                      ) : puedeConfirmarPago ? (
+                        <select
+                          className="border rounded-xl p-2 text-xs bg-white"
+                          value={medioPagoRealPorTurno[t.id] || ""}
+                          onChange={(e) =>
+                            setMedioPagoRealPorTurno({
+                              ...medioPagoRealPorTurno,
+                              [t.id]: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seleccionar</option>
+                          {mediosPagoReal.map((medio) => (
+                            <option key={medio} value={medio}>
+                              {medio}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+
                     <td className="p-3">
                       {t.penalidad_pendiente && !t.penalidad_pagada ? (
                         <span className="text-red-700 font-semibold">
@@ -460,10 +490,10 @@ Este número automático es solo informativo y no está habilitado para recibir 
                           onClick={() => marcarComprobanteRecibido(t)}
                           disabled={!puedeRecibirComprobante}
                           className={`px-3 py-2 rounded-xl text-xs ${t.comprobante_recibido
-                            ? "bg-green-200 text-green-800 cursor-not-allowed"
-                            : puedeRecibirComprobante
-                              ? "bg-amber-500 hover:bg-amber-600 text-white"
-                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                              ? "bg-green-200 text-green-800 cursor-not-allowed"
+                              : puedeRecibirComprobante
+                                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.comprobante_recibido
@@ -475,10 +505,10 @@ Este número automático es solo informativo y no está habilitado para recibir 
                           onClick={() => confirmarPago(t)}
                           disabled={!puedeConfirmarPago}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${pagoConfirmado
-                            ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                            : puedeConfirmarPago
-                              ? "bg-green-600 hover:bg-green-700"
-                              : "bg-slate-300 cursor-not-allowed opacity-60"
+                              ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                              : puedeConfirmarPago
+                                ? "bg-green-600 hover:bg-green-700"
+                                : "bg-slate-300 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {pagoConfirmado
@@ -490,8 +520,8 @@ Este número automático es solo informativo y no está habilitado para recibir 
                           onClick={() => confirmarPenalidad(t)}
                           disabled={!puedeConfirmarPenalidad}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${puedeConfirmarPenalidad
-                            ? "bg-purple-600 hover:bg-purple-700"
-                            : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                              ? "bg-purple-600 hover:bg-purple-700"
+                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.penalidad_pagada
@@ -507,10 +537,10 @@ Este número automático es solo informativo y no está habilitado para recibir 
                           onClick={() => marcarRealizado(t)}
                           disabled={!puedeMarcarAsistencia}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Realizado"
-                            ? "bg-blue-200 text-blue-800 cursor-not-allowed"
-                            : puedeMarcarAsistencia
-                              ? "bg-blue-600 hover:bg-blue-700"
-                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                              ? "bg-blue-200 text-blue-800 cursor-not-allowed"
+                              : puedeMarcarAsistencia
+                                ? "bg-blue-600 hover:bg-blue-700"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.estado === "Realizado"
@@ -522,10 +552,10 @@ Este número automático es solo informativo y no está habilitado para recibir 
                           onClick={() => marcarAusente(t)}
                           disabled={!puedeMarcarAsistencia}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Ausente"
-                            ? "bg-slate-400 cursor-not-allowed"
-                            : puedeMarcarAsistencia
-                              ? "bg-slate-700 hover:bg-slate-800"
-                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                              ? "bg-slate-400 cursor-not-allowed"
+                              : puedeMarcarAsistencia
+                                ? "bg-slate-700 hover:bg-slate-800"
+                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.estado === "Ausente"

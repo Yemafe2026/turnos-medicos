@@ -247,7 +247,7 @@ export default function LicenciaProfesionalPage() {
         form.fecha && form.horario && faltanMasDe24Horas(form.fecha, form.horario);
 
     const metodosPagoDisponibles = permiteEfectivo
-        ? [...metodosPagoBase, "Efectivo en sucursal"]
+        ? [...metodosPagoBase, "En Sucursal"]
         : metodosPagoBase;
 
     const vencimientoPago =
