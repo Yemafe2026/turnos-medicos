@@ -350,12 +350,12 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
           />
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow overflow-x-auto">
+        <div className="bg-white p-4 rounded-2xl shadow overflow-auto max-h-[75vh]">
           {cargando && <p>Cargando...</p>}
 
-          <table className="w-full text-sm">
+          <table className="min-w-[1700px] w-full text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b text-left">
+              <tr className="bg-slate-50 border-b text-left sticky top-0 z-10">
                 <th className="p-3">Tipo</th>
                 <th className="p-3">Locación</th>
                 <th className="p-3">Fecha</th>
@@ -492,10 +492,10 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                           onClick={() => confirmarPago(t)}
                           disabled={!puedeConfirmarPago}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${pagoConfirmado
-                              ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                              : puedeConfirmarPago
-                                ? "bg-green-600 hover:bg-green-700"
-                                : "bg-slate-300 cursor-not-allowed opacity-60"
+                            ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            : puedeConfirmarPago
+                              ? "bg-green-600 hover:bg-green-700"
+                              : "bg-slate-300 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
@@ -505,8 +505,8 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                           onClick={() => confirmarPenalidad(t)}
                           disabled={!puedeConfirmarPenalidad}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${puedeConfirmarPenalidad
-                              ? "bg-purple-600 hover:bg-purple-700"
-                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            ? "bg-purple-600 hover:bg-purple-700"
+                            : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.penalidad_pagada
@@ -522,10 +522,10 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                           onClick={() => marcarRealizado(t)}
                           disabled={!puedeMarcarAsistencia}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Realizado"
-                              ? "bg-blue-200 text-blue-800 cursor-not-allowed"
-                              : puedeMarcarAsistencia
-                                ? "bg-blue-600 hover:bg-blue-700"
-                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            ? "bg-blue-200 text-blue-800 cursor-not-allowed"
+                            : puedeMarcarAsistencia
+                              ? "bg-blue-600 hover:bg-blue-700"
+                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.estado === "Realizado"
@@ -537,10 +537,10 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                           onClick={() => marcarAusente(t)}
                           disabled={!puedeMarcarAsistencia}
                           className={`px-3 py-2 rounded-xl text-xs text-white ${t.estado === "Ausente"
-                              ? "bg-slate-400 cursor-not-allowed"
-                              : puedeMarcarAsistencia
-                                ? "bg-slate-700 hover:bg-slate-800"
-                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                            ? "bg-slate-400 cursor-not-allowed"
+                            : puedeMarcarAsistencia
+                              ? "bg-slate-700 hover:bg-slate-800"
+                              : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
                           {t.estado === "Ausente" ? "✔ Ausente" : "No se presentó"}
