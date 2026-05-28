@@ -3,9 +3,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 
-const locaciones = [
-    "Sede Cipolletti",
-    "Sede Neuquén",
+const locaciones = ["Sede Cipolletti", "Sede Neuquén"];
+
+const IMPORTE_PROFESIONAL_ESTANDAR = 150000;
+const IMPORTE_PROFESIONAL_BENEFICIO = 100000;
+
+const condicionesBeneficio = [
+    "Personal de Policía de la Provincia de Río Negro",
+    "Bombero voluntario",
+    "Empleado Municipal de Cipolletti",
+    "Ninguno de los anteriores",
 ];
 
 const direccionesLaboratorio = {
@@ -26,10 +33,6 @@ const datosPagoPorLocacion = {
         titular: "HUINCU MED S.A.S",
     },
     "Sede Neuquén": {
-        alias: "POSE.MARCA.REBAJAR",
-        titular: "VANNLOGIC S.A.S",
-    },
-    "Sede Plaza Huincul": {
         alias: "POSE.MARCA.REBAJAR",
         titular: "VANNLOGIC S.A.S",
     },
@@ -60,22 +63,27 @@ function normalizarTexto(valor) {
 
 function formatearTelefonoWhatsApp(celular) {
     const limpio = String(celular || "").replace(/\D/g, "");
-
     if (limpio.startsWith("54")) return limpio;
-
-    if (limpio.startsWith("29915")) {
-        return `54${limpio}`;
-    }
-
-    if (limpio.startsWith("299")) {
-        return `5429915${limpio.slice(3)}`;
-    }
-
-    if (limpio.startsWith("15")) {
-        return `54299${limpio}`;
-    }
-
+    if (limpio.startsWith("29915")) return `54${limpio}`;
+    if (limpio.startsWith("299")) return `5429915${limpio.slice(3)}`;
+    if (limpio.startsWith("15")) return `54299${limpio}`;
     return limpio;
+}
+
+function formatearImporte(valor) {
+    return `$${Number(valor || 0).toLocaleString("es-AR")}`;
+}
+
+function calcularImporteServicio(form) {
+    if (
+        form.locacion === "Sede Cipolletti" &&
+        form.condicionBeneficio &&
+        form.condicionBeneficio !== "Ninguno de los anteriores"
+    ) {
+        return IMPORTE_PROFESIONAL_BENEFICIO;
+    }
+
+    return IMPORTE_PROFESIONAL_ESTANDAR;
 }
 
 function obtenerFechaHoraTurno(fecha, horario) {
@@ -226,12 +234,14 @@ export default function LicenciaProfesionalPage() {
         mayor65: "",
         tieneLaboratorioReciente: "",
         locacion: "",
+        condicionBeneficio: "Ninguno de los anteriores",
         fecha: "",
         horario: "",
         metodoPago: "",
     });
 
     const datosPago = datosPagoPorLocacion[form.locacion];
+    const importeServicio = calcularImporteServicio(form);
 
     const permiteEfectivo =
         form.fecha && form.horario && faltanMasDe24Horas(form.fecha, form.horario);
@@ -382,6 +392,7 @@ export default function LicenciaProfesionalPage() {
         const pago = datosPagoPorLocacion[form.locacion];
         const vencimiento = calcularVencimientoPago(form.fecha, form.horario);
         const plazoPago = formatearPlazoPago(form.fecha, form.horario, vencimiento);
+        const importeFinal = calcularImporteServicio(form);
 
         setCargando(true);
 
@@ -396,6 +407,8 @@ export default function LicenciaProfesionalPage() {
                     mayor65: form.mayor65,
                     laboratorio_reciente: form.tieneLaboratorioReciente,
                     locacion: form.locacion,
+                    condicion_beneficio: form.condicionBeneficio,
+                    importe_servicio: importeFinal,
                     fecha: form.fecha,
                     horario: form.horario,
                     estado: "Pendiente de pago",
@@ -428,6 +441,13 @@ Horario del Turno: ${form.horario}
 Sede: ${form.locacion}
 Dirección: ${direccionesCentroMedico[form.locacion]}
 
+Importe del servicio: ${formatearImporte(importeFinal)}
+
+${form.locacion === "Sede Cipolletti"
+                ? `Condición informada: ${form.condicionBeneficio}`
+                : ``
+            }
+
 ${form.tieneLaboratorioReciente === "No"
                 ? `Laboratorio: debe presentarse a las 07:00 hs.
 Dirección laboratorio: ${direccionesLaboratorio[form.locacion]}
@@ -447,8 +467,8 @@ Alias: ${pago?.alias || ""}
 Titular: ${pago?.titular || ""}
 
 IMPORTANTE:
-Una vez realizada la transferencia, enviar comprobante de pago vía WhatsApp al mismo número desde el cual recibirá este mensaje.
-Solo luego de recibir y validar el comprobante, se confirmará el turno.
+Para enviar comprobantes de pago o realizar consultas, comuníquese con nuestro equipo de atención por WhatsApp al +54 9 299 5281 922.
+El turno será confirmado únicamente luego de recibir y validar el comprobante.
 
 Vencimiento del pago: ${plazoPago}.`;
 
@@ -502,6 +522,7 @@ Vencimiento del pago: ${plazoPago}.`;
 
         setPaso(3);
     };
+
     const reiniciarFormulario = () => {
         setPaso(1);
         setError("");
@@ -513,12 +534,12 @@ Vencimiento del pago: ${plazoPago}.`;
             mayor65: "",
             tieneLaboratorioReciente: "",
             locacion: "",
+            condicionBeneficio: "Ninguno de los anteriores",
             fecha: "",
             horario: "",
             metodoPago: "",
         });
     };
-
     return (
         <main className="min-h-screen bg-slate-100 p-6">
             <div className="mx-auto max-w-3xl space-y-6">
@@ -540,30 +561,13 @@ Vencimiento del pago: ${plazoPago}.`;
 
                 <div className="bg-white rounded-2xl p-4 shadow">
                     <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                        <div
-                            className={`rounded-xl p-2 ${paso === 1
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
-                                }`}
-                        >
+                        <div className={`rounded-xl p-2 ${paso === 1 ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-600"}`}>
                             1. Datos
                         </div>
-
-                        <div
-                            className={`rounded-xl p-2 ${paso === 2
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
-                                }`}
-                        >
+                        <div className={`rounded-xl p-2 ${paso === 2 ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-600"}`}>
                             2. Horario y pago
                         </div>
-
-                        <div
-                            className={`rounded-xl p-2 ${paso === 3
-                                ? "bg-orange-500 text-white"
-                                : "bg-slate-100 text-slate-600"
-                                }`}
-                        >
+                        <div className={`rounded-xl p-2 ${paso === 3 ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-600"}`}>
                             3. Solicitud
                         </div>
                     </div>
@@ -583,9 +587,7 @@ Vencimiento del pago: ${plazoPago}.`;
                             className="w-full border rounded-xl p-3"
                             placeholder="Nombre y apellido"
                             value={form.nombre}
-                            onChange={(e) =>
-                                setForm({ ...form, nombre: e.target.value })
-                            }
+                            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                         />
 
                         <input
@@ -593,10 +595,7 @@ Vencimiento del pago: ${plazoPago}.`;
                             placeholder="DNI"
                             value={form.dni}
                             onChange={(e) =>
-                                setForm({
-                                    ...form,
-                                    dni: e.target.value.replace(/\D/g, ""),
-                                })
+                                setForm({ ...form, dni: e.target.value.replace(/\D/g, "") })
                             }
                         />
 
@@ -605,43 +604,24 @@ Vencimiento del pago: ${plazoPago}.`;
                             placeholder="Celular"
                             value={form.celular}
                             onChange={(e) =>
-                                setForm({
-                                    ...form,
-                                    celular: normalizarCelular(e.target.value),
-                                })
+                                setForm({ ...form, celular: normalizarCelular(e.target.value) })
                             }
                         />
 
                         <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
                             <p className="font-semibold">¿Es mayor de 65 años?</p>
-
                             <div className="grid grid-cols-2 gap-3">
                                 {["Sí", "No"].map((opcion) => (
                                     <button
                                         key={opcion}
                                         type="button"
-                                        onClick={() =>
-                                            setForm({
-                                                ...form,
-                                                mayor65: opcion,
-                                            })
-                                        }
-                                        className={`border rounded-xl p-3 ${form.mayor65 === opcion
-                                            ? "bg-orange-500 text-white border-orange-500"
-                                            : "bg-white"
-                                            }`}
+                                        onClick={() => setForm({ ...form, mayor65: opcion })}
+                                        className={`border rounded-xl p-3 ${form.mayor65 === opcion ? "bg-orange-500 text-white border-orange-500" : "bg-white"}`}
                                     >
                                         {opcion}
                                     </button>
                                 ))}
                             </div>
-
-                            {form.mayor65 === "Sí" && (
-                                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
-                                    Los solicitantes mayores de 65 años pueden requerir
-                                    coordinación especial previa.
-                                </div>
-                            )}
                         </div>
 
                         <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
@@ -655,39 +635,14 @@ Vencimiento del pago: ${plazoPago}.`;
                                         key={opcion}
                                         type="button"
                                         onClick={() =>
-                                            setForm({
-                                                ...form,
-                                                tieneLaboratorioReciente: opcion,
-                                            })
+                                            setForm({ ...form, tieneLaboratorioReciente: opcion })
                                         }
-                                        className={`border rounded-xl p-3 ${form.tieneLaboratorioReciente === opcion
-                                            ? "bg-orange-500 text-white border-orange-500"
-                                            : "bg-white"
-                                            }`}
+                                        className={`border rounded-xl p-3 ${form.tieneLaboratorioReciente === opcion ? "bg-orange-500 text-white border-orange-500" : "bg-white"}`}
                                     >
                                         {opcion}
                                     </button>
                                 ))}
                             </div>
-
-                            {form.tieneLaboratorioReciente === "No" && form.locacion && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-slate-700">
-                                    Deberá presentarse a las <strong>07:00 hs</strong> para
-                                    realizar laboratorio.
-                                    <br />
-                                    <strong>Dirección laboratorio:</strong>{" "}
-                                    {direccionesLaboratorio[form.locacion]}
-                                    <br />
-                                    <strong>Indicaciones:</strong> ayuno mínimo de 8 horas.
-                                </div>
-                            )}
-
-                            {form.tieneLaboratorioReciente === "Sí" && (
-                                <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-slate-700">
-                                    Deberá presentar los estudios de laboratorio realizados dentro
-                                    de los últimos 60 días.
-                                </div>
-                            )}
                         </div>
 
                         <select
@@ -697,6 +652,10 @@ Vencimiento del pago: ${plazoPago}.`;
                                 setForm({
                                     ...form,
                                     locacion: e.target.value,
+                                    condicionBeneficio:
+                                        e.target.value === "Sede Cipolletti"
+                                            ? form.condicionBeneficio
+                                            : "Ninguno de los anteriores",
                                     horario: "",
                                     metodoPago: "",
                                 })
@@ -710,13 +669,44 @@ Vencimiento del pago: ${plazoPago}.`;
                             ))}
                         </select>
 
+                        {form.locacion === "Sede Cipolletti" && (
+                            <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
+                                <p className="font-semibold">
+                                    ¿Pertenece a alguna de estas instituciones?
+                                </p>
+
+                                <div className="grid gap-3">
+                                    {condicionesBeneficio.map((opcion) => (
+                                        <button
+                                            key={opcion}
+                                            type="button"
+                                            onClick={() =>
+                                                setForm({
+                                                    ...form,
+                                                    condicionBeneficio: opcion,
+                                                    horario: "",
+                                                    metodoPago: "",
+                                                })
+                                            }
+                                            className={`border rounded-xl p-3 text-left ${form.condicionBeneficio === opcion ? "bg-orange-500 text-white border-orange-500" : "bg-white"}`}
+                                        >
+                                            {opcion}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-slate-700">
+                                    El importe del servicio se calculará según la condición informada.
+                                </div>
+                            </div>
+                        )}
+
                         {form.locacion && (
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-700">
                                 <p>
                                     <strong>Centro médico:</strong>{" "}
                                     {direccionesCentroMedico[form.locacion]}
                                 </p>
-
                                 {form.tieneLaboratorioReciente === "No" && (
                                     <p>
                                         <strong>Laboratorio:</strong>{" "}
@@ -754,15 +744,12 @@ Vencimiento del pago: ${plazoPago}.`;
                         <h2 className="text-xl font-semibold">Elegir horario</h2>
 
                         <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
-                            <p>
-                                <strong>Tipo:</strong> Licencia Profesional
-                            </p>
-                            <p>
-                                <strong>Sede:</strong> {form.locacion}
-                            </p>
-                            <p>
-                                <strong>Fecha:</strong> {form.fecha}
-                            </p>
+                            <p><strong>Tipo:</strong> Licencia Profesional</p>
+                            <p><strong>Sede:</strong> {form.locacion}</p>
+                            <p><strong>Fecha:</strong> {form.fecha}</p>
+                            {form.locacion === "Sede Cipolletti" && (
+                                <p><strong>Condición:</strong> {form.condicionBeneficio}</p>
+                            )}
                         </div>
 
                         {cargandoHorarios && (
@@ -788,10 +775,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                                 metodoPago: "",
                                             })
                                         }
-                                        className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                            ? "bg-orange-500 text-white border-orange-500"
-                                            : estado.clases
-                                            }`}
+                                        className={`rounded-xl border p-4 text-left transition ${seleccionado ? "bg-orange-500 text-white border-orange-500" : estado.clases}`}
                                     >
                                         <div className="font-bold">{hora}</div>
                                         <div className="text-xs">{estado.texto}</div>
@@ -802,6 +786,15 @@ Vencimiento del pago: ${plazoPago}.`;
 
                         {form.horario && (
                             <div className="bg-white border rounded-2xl p-4 space-y-4">
+                                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
+                                    <p className="font-semibold text-green-800">
+                                        Importe del servicio
+                                    </p>
+                                    <p className="text-2xl font-bold text-green-900">
+                                        {formatearImporte(importeServicio)}
+                                    </p>
+                                </div>
+
                                 <h3 className="font-semibold">Método de pago</h3>
 
                                 {!permiteEfectivo && (
@@ -826,15 +819,9 @@ Vencimiento del pago: ${plazoPago}.`;
                                             key={metodo}
                                             type="button"
                                             onClick={() =>
-                                                setForm({
-                                                    ...form,
-                                                    metodoPago: metodo,
-                                                })
+                                                setForm({ ...form, metodoPago: metodo })
                                             }
-                                            className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : "bg-white"
-                                                }`}
+                                            className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo ? "bg-orange-500 text-white border-orange-500" : "bg-white"}`}
                                         >
                                             {metodo}
                                         </button>
@@ -843,12 +830,8 @@ Vencimiento del pago: ${plazoPago}.`;
 
                                 {form.metodoPago === "Transferencia" && datosPago && (
                                     <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
-                                        <p>
-                                            <strong>Alias:</strong> {datosPago.alias}
-                                        </p>
-                                        <p>
-                                            <strong>Titular:</strong> {datosPago.titular}
-                                        </p>
+                                        <p><strong>Alias:</strong> {datosPago.alias}</p>
+                                        <p><strong>Titular:</strong> {datosPago.titular}</p>
                                         <p>
                                             Luego de transferir, administración deberá validar el pago
                                             para confirmar el turno.
@@ -908,21 +891,13 @@ Vencimiento del pago: ${plazoPago}.`;
                             </h3>
 
                             <p>
-                                <strong>Método seleccionado:</strong> {form.metodoPago}
+                                <strong>Importe del servicio:</strong>{" "}
+                                {formatearImporte(importeServicio)}
                             </p>
 
-                            {permiteEfectivo ? (
-                                <p>
-                                    El pago debe estar confirmado hasta{" "}
-                                    <strong>24 hs antes del turno</strong>.
-                                </p>
-                            ) : (
-                                <p>
-                                    Como el turno fue reservado dentro de las próximas 24 hs, el
-                                    pago debe confirmarse dentro de los próximos{" "}
-                                    <strong>60 minutos</strong>.
-                                </p>
-                            )}
+                            <p>
+                                <strong>Método seleccionado:</strong> {form.metodoPago}
+                            </p>
 
                             <p>
                                 <strong>Vencimiento del pago:</strong>{" "}
@@ -931,40 +906,26 @@ Vencimiento del pago: ${plazoPago}.`;
 
                             {form.metodoPago === "Transferencia" && datosPago && (
                                 <div className="bg-white border rounded-xl p-4 text-sm space-y-1">
-                                    <p>
-                                        <strong>Alias:</strong> {datosPago.alias}
-                                    </p>
-                                    <p>
-                                        <strong>Titular:</strong> {datosPago.titular}
-                                    </p>
-                                </div>
-                            )}
-
-                            {form.metodoPago === "Efectivo en sucursal" && (
-                                <div className="bg-white border rounded-xl p-4 text-sm space-y-1">
-                                    <p>Puede abonar en efectivo en la sucursal seleccionada.</p>
-                                    <p>
-                                        <strong>Dirección:</strong>{" "}
-                                        {direccionesCentroMedico[form.locacion]}
-                                    </p>
+                                    <p><strong>Alias:</strong> {datosPago.alias}</p>
+                                    <p><strong>Titular:</strong> {datosPago.titular}</p>
                                 </div>
                             )}
 
                             <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-5 space-y-3">
-                                <div className="text-red-700 font-bold text-lg flex items-center gap-2">
+                                <div className="text-red-700 font-bold text-lg">
                                     ⚠️ Importante
                                 </div>
 
                                 <div className="text-sm text-red-800 space-y-2">
                                     <p>
-                                        Una vez realizada la transferencia, deberá enviar el
-                                        comprobante de pago vía WhatsApp al mismo número desde el
-                                        cual recibirá el mensaje de pre-confirmación.
+                                        Para enviar comprobantes de pago o realizar consultas,
+                                        comuníquese con nuestro equipo de atención por WhatsApp al{" "}
+                                        <strong>+54 9 299 5281 922</strong>.
                                     </p>
 
                                     <p className="font-semibold">
-                                        El turno será confirmado únicamente luego de recibir y
-                                        validar el comprobante.
+                                        El turno será confirmado únicamente luego de recibir y validar
+                                        el comprobante.
                                     </p>
 
                                     <p>
@@ -981,9 +942,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                 <h3 className="font-semibold text-blue-800">
                                     Indicaciones de laboratorio
                                 </h3>
-                                <p>
-                                    Debe presentarse a las <strong>07:00 hs</strong>.
-                                </p>
+                                <p>Debe presentarse a las <strong>07:00 hs</strong>.</p>
                                 <p>
                                     <strong>Dirección:</strong>{" "}
                                     {direccionesLaboratorio[form.locacion]}
@@ -1002,41 +961,33 @@ Vencimiento del pago: ${plazoPago}.`;
                         )}
 
                         <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
-                            <p>
-                                <strong>Tipo de turno:</strong> Licencia Profesional
-                            </p>
-                            <p>
-                                <strong>Paciente:</strong> {form.nombre}
-                            </p>
-                            <p>
-                                <strong>DNI:</strong> {form.dni}
-                            </p>
-                            <p>
-                                <strong>Celular:</strong> {form.celular}
-                            </p>
-                            <p>
-                                <strong>Mayor de 65:</strong> {form.mayor65}
-                            </p>
+                            <p><strong>Tipo de turno:</strong> Licencia Profesional</p>
+                            <p><strong>Paciente:</strong> {form.nombre}</p>
+                            <p><strong>DNI:</strong> {form.dni}</p>
+                            <p><strong>Celular:</strong> {form.celular}</p>
+                            <p><strong>Mayor de 65:</strong> {form.mayor65}</p>
                             <p>
                                 <strong>Laboratorio reciente:</strong>{" "}
                                 {form.tieneLaboratorioReciente}
                             </p>
+                            <p><strong>Sede:</strong> {form.locacion}</p>
+                            {form.locacion === "Sede Cipolletti" && (
+                                <p>
+                                    <strong>Condición informada:</strong>{" "}
+                                    {form.condicionBeneficio}
+                                </p>
+                            )}
                             <p>
-                                <strong>Sede:</strong> {form.locacion}
+                                <strong>Importe:</strong>{" "}
+                                {formatearImporte(importeServicio)}
                             </p>
                             <p>
                                 <strong>Dirección:</strong>{" "}
                                 {direccionesCentroMedico[form.locacion]}
                             </p>
-                            <p>
-                                <strong>Fecha:</strong> {form.fecha}
-                            </p>
-                            <p>
-                                <strong>Horario:</strong> {form.horario}
-                            </p>
-                            <p>
-                                <strong>Estado:</strong> Pendiente de pago
-                            </p>
+                            <p><strong>Fecha:</strong> {form.fecha}</p>
+                            <p><strong>Horario:</strong> {form.horario}</p>
+                            <p><strong>Estado:</strong> Pendiente de pago</p>
                         </div>
 
                         <button
