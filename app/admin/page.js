@@ -353,9 +353,9 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
         <div className="bg-white p-4 rounded-2xl shadow overflow-auto max-h-[75vh]">
           {cargando && <p>Cargando...</p>}
 
-          <table className="min-w-[1700px] w-full text-xs">
+          <table className="min-w-[1600px] w-full text-[11px]">
             <thead>
-              <tr className="bg-slate-50 border-b text-left sticky top-0 z-10">
+              <tr className="bg-slate-50 border-b text-left">
                 <th className="p-3">Tipo</th>
                 <th className="p-3">Locación</th>
                 <th className="p-3">Fecha</th>
