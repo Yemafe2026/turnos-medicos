@@ -48,6 +48,22 @@ function formatearTelefonoWhatsApp(celular) {
   return limpio;
 }
 
+function formatearImporte(valor) {
+  if (!valor) return "-";
+  return `$${Number(valor).toLocaleString("es-AR")}`;
+}
+
+function mostrarBeneficio(turno) {
+  if (
+    turno.condicion_beneficio &&
+    turno.condicion_beneficio !== "Ninguno de los anteriores"
+  ) {
+    return turno.condicion_beneficio;
+  }
+
+  return "Estándar";
+}
+
 export default function AdminPage() {
   const router = useRouter();
 
@@ -250,7 +266,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
       const coincideFecha = !filtroFecha || t.fecha === filtroFecha;
 
       const texto = `${t.nombre || ""} ${t.dni || ""} ${t.celular || ""} ${t.locacion || ""
-        } ${tipo}`.toLowerCase();
+        } ${tipo} ${mostrarBeneficio(t)}`.toLowerCase();
 
       return (
         coincideTipo &&
@@ -290,7 +306,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
 
         <div className="bg-white p-4 rounded-2xl shadow grid md:grid-cols-5 gap-3">
           <input
-            placeholder="Buscar por paciente, DNI, celular o sede"
+            placeholder="Buscar por paciente, DNI, celular, sede o beneficio"
             className="border p-2 rounded-xl"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
@@ -351,6 +367,8 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                 <th className="p-3">Pago</th>
                 <th className="p-3">Método elegido</th>
                 <th className="p-3">Medio real</th>
+                <th className="p-3">Beneficio</th>
+                <th className="p-3">Importe</th>
                 <th className="p-3">Penalidad</th>
                 <th className="p-3">Acciones</th>
                 <th className="p-3">Asistencia</th>
@@ -363,16 +381,17 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                 const pagoConfirmado = t.pagado || t.estado === "Confirmado";
                 const finalizado = esEstadoFinal(t.estado);
 
-                const puedeConfirmarPago =
-                  !pagoConfirmado && !finalizado;
+                const puedeConfirmarPago = !pagoConfirmado && !finalizado;
 
                 const puedeConfirmarPenalidad =
                   t.estado === "Reprogramado" &&
                   t.penalidad_pendiente &&
                   !t.penalidad_pagada;
 
-                const puedeMarcarAsistencia =
-                  estaConfirmado && !finalizado;
+                const puedeMarcarAsistencia = estaConfirmado && !finalizado;
+
+                const beneficio = mostrarBeneficio(t);
+                const tieneBeneficio = beneficio !== "Estándar";
 
                 return (
                   <tr key={t.id} className="border-b align-top">
@@ -440,6 +459,20 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                     </td>
 
                     <td className="p-3">
+                      {tieneBeneficio ? (
+                        <span className="text-purple-700 font-semibold">
+                          {beneficio}
+                        </span>
+                      ) : (
+                        <span className="text-slate-600">Estándar</span>
+                      )}
+                    </td>
+
+                    <td className="p-3 font-semibold">
+                      {formatearImporte(t.importe_servicio)}
+                    </td>
+
+                    <td className="p-3">
                       {t.penalidad_pendiente && !t.penalidad_pagada ? (
                         <span className="text-red-700 font-semibold">
                           30% pendiente
@@ -465,9 +498,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                                 : "bg-slate-300 cursor-not-allowed opacity-60"
                             }`}
                         >
-                          {pagoConfirmado
-                            ? "Pago confirmado"
-                            : "Confirmar pago"}
+                          {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
                         </button>
 
                         <button
@@ -512,9 +543,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                                 : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
                             }`}
                         >
-                          {t.estado === "Ausente"
-                            ? "✔ Ausente"
-                            : "No se presentó"}
+                          {t.estado === "Ausente" ? "✔ Ausente" : "No se presentó"}
                         </button>
                       </div>
                     </td>
