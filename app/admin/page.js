@@ -29,16 +29,11 @@ function badgeEstado(estado) {
 }
 
 function esEstadoFinal(estado) {
-  return ["Realizado", "Ausente", "No Confirmado", "Cancelado"].includes(
-    estado
-  );
+  return ["Realizado", "Ausente", "No Confirmado", "Cancelado"].includes(estado);
 }
 
 function generarTokenReprogramacion() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
@@ -94,34 +89,10 @@ export default function AdminPage() {
     init();
   }, [router]);
 
-  const marcarComprobanteRecibido = async (turno) => {
-    if (
-      turno.comprobante_recibido ||
-      turno.pagado ||
-      esEstadoFinal(turno.estado)
-    ) {
-      return;
-    }
-
-    await supabase
-      .from("turnos")
-      .update({
-        comprobante_recibido: true,
-      })
-      .eq("id", turno.id);
-
-    cargarTurnos();
-  };
-
   const confirmarPago = async (turno) => {
     const medioPagoReal = medioPagoRealPorTurno[turno.id];
 
-    if (
-      turno.pagado ||
-      turno.estado === "Confirmado" ||
-      !turno.comprobante_recibido ||
-      esEstadoFinal(turno.estado)
-    ) {
+    if (turno.pagado || turno.estado === "Confirmado" || esEstadoFinal(turno.estado)) {
       return;
     }
 
@@ -136,6 +107,7 @@ export default function AdminPage() {
         pagado: true,
         estado: "Confirmado",
         medio_pago_real: medioPagoReal,
+        comprobante_recibido: true,
         pago_confirmado_at: new Date().toISOString(),
       })
       .eq("id", turno.id);
@@ -391,11 +363,8 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                 const pagoConfirmado = t.pagado || t.estado === "Confirmado";
                 const finalizado = esEstadoFinal(t.estado);
 
-                const puedeRecibirComprobante =
-                  !t.comprobante_recibido && !pagoConfirmado && !finalizado;
-
                 const puedeConfirmarPago =
-                  t.comprobante_recibido && !pagoConfirmado && !finalizado;
+                  !pagoConfirmado && !finalizado;
 
                 const puedeConfirmarPenalidad =
                   t.estado === "Reprogramado" &&
@@ -486,21 +455,6 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
 
                     <td className="p-3">
                       <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => marcarComprobanteRecibido(t)}
-                          disabled={!puedeRecibirComprobante}
-                          className={`px-3 py-2 rounded-xl text-xs ${t.comprobante_recibido
-                              ? "bg-green-200 text-green-800 cursor-not-allowed"
-                              : puedeRecibirComprobante
-                                ? "bg-amber-500 hover:bg-amber-600 text-white"
-                                : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
-                            }`}
-                        >
-                          {t.comprobante_recibido
-                            ? "✔ Comprobante recibido"
-                            : "Comprobante recibido"}
-                        </button>
-
                         <button
                           onClick={() => confirmarPago(t)}
                           disabled={!puedeConfirmarPago}
