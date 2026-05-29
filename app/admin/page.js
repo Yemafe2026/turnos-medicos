@@ -74,6 +74,11 @@ export default function AdminPage() {
   const [filtroFecha, setFiltroFecha] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("Todos");
   const [medioPagoRealPorTurno, setMedioPagoRealPorTurno] = useState({});
+  const [perfilAdmin, setPerfilAdmin] = useState(null);
+
+  const rolAdmin = perfilAdmin?.rol || "consulta";
+  const puedeGestionarPagos = ["super_admin", "admin"].includes(rolAdmin);
+  const puedeGestionarAsistencia = ["super_admin", "admin", "operador"].includes(rolAdmin);
 
   const volverAlTurno = (id) => {
     setTimeout(() => {
@@ -109,6 +114,20 @@ export default function AdminPage() {
         return;
       }
 
+      const { data: perfil, error: perfilError } = await supabase
+        .from("perfiles_admin")
+        .select("rol, activo, email")
+        .eq("id", data.session.user.id)
+        .single();
+
+      if (perfilError || !perfil || perfil.activo !== true) {
+        await supabase.auth.signOut();
+        alert("Tu usuario no tiene permisos activos para ingresar al panel.");
+        router.push("/admin/login");
+        return;
+      }
+
+      setPerfilAdmin(perfil);
       cargarTurnos();
     };
 
@@ -116,6 +135,11 @@ export default function AdminPage() {
   }, [router]);
 
   const confirmarPago = async (turno) => {
+    if (!puedeGestionarPagos) {
+      alert("Tu usuario no tiene permisos para confirmar pagos.");
+      return;
+    }
+
     const medioPagoReal = medioPagoRealPorTurno[turno.id];
 
     if (turno.pagado || turno.estado === "Confirmado" || esEstadoFinal(turno.estado)) {
@@ -162,6 +186,11 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
   };
 
   const confirmarPenalidad = async (turno) => {
+    if (!puedeGestionarPagos) {
+      alert("Tu usuario no tiene permisos para confirmar penalidades.");
+      return;
+    }
+
     if (!turno.penalidad_pendiente || turno.penalidad_pagada) return;
 
     await supabase
@@ -179,6 +208,11 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
   };
 
   const marcarRealizado = async (turno) => {
+    if (!puedeGestionarAsistencia) {
+      alert("Tu usuario no tiene permisos para modificar asistencia.");
+      return;
+    }
+
     if (turno.estado !== "Confirmado") return;
 
     await supabase
@@ -194,6 +228,11 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
   };
 
   const marcarAusente = async (turno) => {
+    if (!puedeGestionarAsistencia) {
+      alert("Tu usuario no tiene permisos para modificar asistencia.");
+      return;
+    }
+
     if (turno.estado !== "Confirmado") return;
 
     const esSegundaAusencia =
@@ -269,7 +308,6 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
     await cargarTurnos();
     volverAlTurno(turno.id);
   };
-
   const turnosFiltrados = useMemo(() => {
     return turnos.filter((t) => {
       const tipo = t.tipo_turno || "Carnet Profesional";
@@ -312,6 +350,9 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
               <h1 className="text-2xl font-bold">Panel Administrativo</h1>
               <p className="text-slate-500 text-sm">
                 Gestión de turnos, pagos y asistencia
+              </p>
+              <p className="text-xs text-slate-400">
+                Rol activo: <span className="font-semibold">{rolAdmin}</span>
               </p>
             </div>
           </div>
@@ -425,14 +466,17 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
               const pagoConfirmado = t.pagado || t.estado === "Confirmado";
               const finalizado = esEstadoFinal(t.estado);
 
-              const puedeConfirmarPago = !pagoConfirmado && !finalizado;
+              const puedeConfirmarPago =
+                puedeGestionarPagos && !pagoConfirmado && !finalizado;
 
               const puedeConfirmarPenalidad =
+                puedeGestionarPagos &&
                 t.estado === "Reprogramado" &&
                 t.penalidad_pendiente &&
                 !t.penalidad_pagada;
 
-              const puedeMarcarAsistencia = estaConfirmado && !finalizado;
+              const puedeMarcarAsistencia =
+                puedeGestionarAsistencia && estaConfirmado && !finalizado;
 
               const beneficio = mostrarBeneficio(t);
               const tieneBeneficio = beneficio !== "Estándar";
@@ -463,16 +507,32 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                     </div>
 
                     <div className="col-span-12 md:col-span-2 border-r md:pr-4 space-y-1 text-sm">
-                      <p><span className="font-semibold">Tipo:</span> {t.tipo_turno || "Carnet Profesional"}</p>
-                      <p><span className="font-semibold">Sede:</span> {t.locacion || "-"}</p>
-                      <p><span className="font-semibold">Fecha:</span> {t.fecha || "-"}</p>
-                      <p><span className="font-semibold">Hora:</span> {t.horario || "-"}</p>
+                      <p>
+                        <span className="font-semibold">Tipo:</span>{" "}
+                        {t.tipo_turno || "Carnet Profesional"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Sede:</span>{" "}
+                        {t.locacion || "-"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Fecha:</span>{" "}
+                        {t.fecha || "-"}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Hora:</span>{" "}
+                        {t.horario || "-"}
+                      </p>
                     </div>
 
                     <div className="col-span-12 md:col-span-2 border-r md:pr-4 space-y-2 text-sm">
                       <div>
                         <p className="text-xs text-slate-500">Estado</p>
-                        <span className={`inline-block px-3 py-1 rounded-full border text-xs font-semibold ${badgeEstado(estadoActual)}`}>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full border text-xs font-semibold ${badgeEstado(
+                            estadoActual
+                          )}`}
+                        >
                           {estadoActual}
                         </span>
                       </div>
@@ -480,19 +540,27 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                       <div>
                         <p className="text-xs text-slate-500">Pago</p>
                         {pagoConfirmado ? (
-                          <span className="text-green-700 font-semibold">Pagado</span>
+                          <span className="text-green-700 font-semibold">
+                            Pagado
+                          </span>
                         ) : (
-                          <span className="text-red-700 font-semibold">No pagado</span>
+                          <span className="text-red-700 font-semibold">
+                            No pagado
+                          </span>
                         )}
                       </div>
 
                       <div>
-                        <p className="text-xs text-slate-500">Método elegido</p>
-                        <p className="font-semibold">{t.metodo_pago || "-"}</p>
+                        <p className="text-xs text-slate-500">
+                          Método elegido
+                        </p>
+                        <p className="font-semibold">
+                          {t.metodo_pago || "-"}
+                        </p>
                       </div>
-
                       <div>
                         <p className="text-xs text-slate-500">Medio real</p>
+
                         {t.medio_pago_real ? (
                           <p className="text-green-700 font-semibold">
                             {t.medio_pago_real}
@@ -509,6 +577,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                             }
                           >
                             <option value="">Seleccionar</option>
+
                             {mediosPagoReal.map((medio) => (
                               <option key={medio} value={medio}>
                                 {medio}
@@ -524,15 +593,21 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                     <div className="col-span-12 md:col-span-2 border-r md:pr-4 space-y-2 text-sm">
                       <div>
                         <p className="text-xs text-slate-500">Beneficio</p>
+
                         {tieneBeneficio ? (
-                          <p className="text-purple-700 font-bold">{beneficio}</p>
+                          <p className="text-purple-700 font-bold">
+                            {beneficio}
+                          </p>
                         ) : (
-                          <p className="font-semibold text-slate-700">Estándar</p>
+                          <p className="font-semibold text-slate-700">
+                            Estándar
+                          </p>
                         )}
                       </div>
 
                       <div>
                         <p className="text-xs text-slate-500">Importe</p>
+
                         <p className="text-xl font-bold">
                           {formatearImporte(t.importe_servicio)}
                         </p>
@@ -540,12 +615,18 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
 
                       <div>
                         <p className="text-xs text-slate-500">Penalidad</p>
+
                         {t.penalidad_pendiente && !t.penalidad_pagada ? (
-                          <span className="text-red-700 font-semibold">30% pendiente</span>
+                          <span className="text-red-700 font-semibold">
+                            30% pendiente
+                          </span>
                         ) : t.penalidad_pagada ? (
-                          <span className="text-green-700 font-semibold">Penalidad pagada</span>
+                          <span className="text-green-700 font-semibold">
+                            Penalidad pagada
+                          </span>
                         ) : (
-                          <span className="text-slate-400">-</span>
+                          <span className="text-slate-400">-
+                          </span>
                         )}
                       </div>
                     </div>
@@ -561,7 +642,9 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                               : "bg-slate-200 text-slate-500 cursor-not-allowed"
                           }`}
                       >
-                        {pagoConfirmado ? "Pago confirmado" : "Confirmar pago"}
+                        {pagoConfirmado
+                          ? "Pago confirmado"
+                          : "Confirmar pago"}
                       </button>
 
                       <button
@@ -572,7 +655,9 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                             : "bg-purple-100 text-purple-300 cursor-not-allowed"
                           }`}
                       >
-                        {t.penalidad_pagada ? "Penalidad pagada" : "Confirmar penalidad"}
+                        {t.penalidad_pagada
+                          ? "Penalidad pagada"
+                          : "Confirmar penalidad"}
                       </button>
                     </div>
 
@@ -587,7 +672,9 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                               : "bg-slate-200 text-slate-400 cursor-not-allowed"
                           }`}
                       >
-                        {t.estado === "Realizado" ? "✔ Se presentó" : "Se presentó"}
+                        {t.estado === "Realizado"
+                          ? "✔ Se presentó"
+                          : "Se presentó"}
                       </button>
 
                       <button
@@ -600,7 +687,9 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                               : "bg-slate-200 text-slate-400 cursor-not-allowed"
                           }`}
                       >
-                        {t.estado === "Ausente" ? "✔ Ausente" : "No se presentó"}
+                        {t.estado === "Ausente"
+                          ? "✔ Ausente"
+                          : "No se presentó"}
                       </button>
                     </div>
                   </div>
