@@ -420,19 +420,6 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
           )}
 
           <div>
-            <label className="text-xs text-slate-500">Estado</label>
-            <select
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
-              className="border p-2 rounded-xl bg-white w-full"
-            >
-              {estados.map((e) => (
-                <option key={e}>{e}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label className="text-xs text-slate-500">Sede</label>
             <select
               value={filtroSede}
