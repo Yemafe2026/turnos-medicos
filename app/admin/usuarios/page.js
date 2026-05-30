@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../supabase";
 
-const roles = ["super_admin", "admin", "operador", "consulta"];
+const roles = ["super_admin", "supervisor", "admisionista", "operador"];
+
+const locaciones = [
+    "Sede Cipolletti",
+    "Sede Neuquén",
+    "Sede Plaza Huincul",
+];
+
+function requiereLocacion(rol) {
+    return rol === "admisionista" || rol === "operador";
+}
 
 export default function AdminUsuariosPage() {
     const router = useRouter();
@@ -18,6 +28,7 @@ export default function AdminUsuariosPage() {
         id: "",
         email: "",
         rol: "operador",
+        locacion: "Sede Cipolletti",
     });
 
     const cargar = async () => {
@@ -39,7 +50,12 @@ export default function AdminUsuariosPage() {
             .eq("id", userId)
             .single();
 
-        if (perfilError || !perfil || perfil.rol !== "super_admin" || !perfil.activo) {
+        if (
+            perfilError ||
+            !perfil ||
+            perfil.rol !== "super_admin" ||
+            !perfil.activo
+        ) {
             router.push("/admin");
             return;
         }
@@ -73,12 +89,18 @@ export default function AdminUsuariosPage() {
             return;
         }
 
+        if (requiereLocacion(nuevo.rol) && !nuevo.locacion) {
+            setMensaje("Admisionistas y operadores deben tener una sede asignada.");
+            return;
+        }
+
         const { error } = await supabase.from("perfiles_admin").insert([
             {
                 id: nuevo.id.trim(),
                 email: nuevo.email.trim(),
                 rol: nuevo.rol,
                 activo: true,
+                locacion: requiereLocacion(nuevo.rol) ? nuevo.locacion : null,
             },
         ]);
 
@@ -91,6 +113,7 @@ export default function AdminUsuariosPage() {
             id: "",
             email: "",
             rol: "operador",
+            locacion: "Sede Cipolletti",
         });
 
         cargar();
@@ -99,13 +122,41 @@ export default function AdminUsuariosPage() {
     const cambiarRol = async (usuario, rol) => {
         setMensaje("");
 
+        const nuevaLocacion = requiereLocacion(rol)
+            ? usuario.locacion || "Sede Cipolletti"
+            : null;
+
         const { error } = await supabase
             .from("perfiles_admin")
-            .update({ rol })
+            .update({
+                rol,
+                locacion: nuevaLocacion,
+            })
             .eq("id", usuario.id);
 
         if (error) {
             setMensaje(`No se pudo cambiar el rol: ${error.message}`);
+            return;
+        }
+
+        cargar();
+    };
+
+    const cambiarLocacion = async (usuario, locacion) => {
+        setMensaje("");
+
+        if (!requiereLocacion(usuario.rol)) {
+            setMensaje("Este rol no requiere sede asignada.");
+            return;
+        }
+
+        const { error } = await supabase
+            .from("perfiles_admin")
+            .update({ locacion })
+            .eq("id", usuario.id);
+
+        if (error) {
+            setMensaje(`No se pudo cambiar la sede: ${error.message}`);
             return;
         }
 
@@ -135,12 +186,12 @@ export default function AdminUsuariosPage() {
 
     return (
         <main className="min-h-screen bg-slate-100 p-4">
-            <div className="max-w-5xl mx-auto space-y-4">
+            <div className="max-w-6xl mx-auto space-y-4">
                 <div className="bg-white p-4 rounded-2xl shadow flex justify-between items-center">
                     <div>
                         <h1 className="text-2xl font-bold">Usuarios Administrativos</h1>
                         <p className="text-sm text-slate-500">
-                            Gestión de roles y accesos al panel
+                            Gestión de roles, sedes y accesos al panel
                         </p>
                     </div>
 
@@ -161,7 +212,7 @@ export default function AdminUsuariosPage() {
                 <div className="bg-white p-4 rounded-2xl shadow space-y-4">
                     <h2 className="font-semibold">Agregar perfil administrativo</h2>
 
-                    <div className="grid md:grid-cols-4 gap-3">
+                    <div className="grid md:grid-cols-5 gap-3">
                         <input
                             className="border p-2 rounded-xl"
                             placeholder="User UID de Supabase"
@@ -179,11 +230,38 @@ export default function AdminUsuariosPage() {
                         <select
                             className="border p-2 rounded-xl bg-white"
                             value={nuevo.rol}
-                            onChange={(e) => setNuevo({ ...nuevo, rol: e.target.value })}
+                            onChange={(e) =>
+                                setNuevo({
+                                    ...nuevo,
+                                    rol: e.target.value,
+                                    locacion: requiereLocacion(e.target.value)
+                                        ? nuevo.locacion || "Sede Cipolletti"
+                                        : "",
+                                })
+                            }
                         >
                             {roles.map((rol) => (
                                 <option key={rol} value={rol}>
                                     {rol}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            className="border p-2 rounded-xl bg-white"
+                            value={nuevo.locacion}
+                            disabled={!requiereLocacion(nuevo.rol)}
+                            onChange={(e) =>
+                                setNuevo({ ...nuevo, locacion: e.target.value })
+                            }
+                        >
+                            {!requiereLocacion(nuevo.rol) && (
+                                <option value="">Todas las sedes</option>
+                            )}
+
+                            {locaciones.map((locacion) => (
+                                <option key={locacion} value={locacion}>
+                                    {locacion}
                                 </option>
                             ))}
                         </select>
@@ -212,7 +290,7 @@ export default function AdminUsuariosPage() {
                             {usuarios.map((u) => (
                                 <div
                                     key={u.id}
-                                    className="border rounded-2xl p-4 grid md:grid-cols-5 gap-3 items-center"
+                                    className="border rounded-2xl p-4 grid md:grid-cols-6 gap-3 items-center"
                                 >
                                     <div className="md:col-span-2">
                                         <p className="font-semibold">{u.email}</p>
@@ -228,6 +306,25 @@ export default function AdminUsuariosPage() {
                                         {roles.map((rol) => (
                                             <option key={rol} value={rol}>
                                                 {rol}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    <select
+                                        className="border p-2 rounded-xl bg-white"
+                                        value={u.locacion || ""}
+                                        disabled={
+                                            !requiereLocacion(u.rol) || u.id === perfilActual?.id
+                                        }
+                                        onChange={(e) => cambiarLocacion(u, e.target.value)}
+                                    >
+                                        {!requiereLocacion(u.rol) && (
+                                            <option value="">Todas las sedes</option>
+                                        )}
+
+                                        {locaciones.map((locacion) => (
+                                            <option key={locacion} value={locacion}>
+                                                {locacion}
                                             </option>
                                         ))}
                                     </select>
