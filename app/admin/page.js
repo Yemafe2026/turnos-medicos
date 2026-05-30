@@ -636,7 +636,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
 
                         {t.penalidad_pendiente && !t.penalidad_pagada ? (
                           <span className="text-red-700 font-semibold">
-                            30% pendiente
+                            $50.000 pendiente
                           </span>
                         ) : t.penalidad_pagada ? (
                           <span className="text-green-700 font-semibold">
