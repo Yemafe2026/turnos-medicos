@@ -16,8 +16,8 @@ const condicionesBeneficio = [
 ];
 
 const direccionesLaboratorio = {
-    "Sede Cipolletti": "25 de Mayo 525",
-    "Sede Neuquén": "A definir",
+    "Sede Cipolletti": "Laboratorios IDAC; 25 de Mayo 523",
+    "Sede Neuquén": "Laboratorios CEIM; Belgrano 1380",
     "Sede Plaza Huincul": "A definir",
 };
 

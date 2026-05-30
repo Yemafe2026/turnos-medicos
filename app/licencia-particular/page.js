@@ -495,8 +495,8 @@ Vencimiento del pago: ${plazoPago}.`;
                     <div className="grid grid-cols-3 gap-2 text-center text-sm">
                         <div
                             className={`rounded-xl p-2 ${paso === 1
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             1. Datos
@@ -504,8 +504,8 @@ Vencimiento del pago: ${plazoPago}.`;
 
                         <div
                             className={`rounded-xl p-2 ${paso === 2
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             2. Horario y pago
@@ -513,8 +513,8 @@ Vencimiento del pago: ${plazoPago}.`;
 
                         <div
                             className={`rounded-xl p-2 ${paso === 3
-                                    ? "bg-orange-500 text-white"
-                                    : "bg-slate-100 text-slate-600"
+                                ? "bg-orange-500 text-white"
+                                : "bg-slate-100 text-slate-600"
                                 }`}
                         >
                             3. Solicitud
@@ -634,8 +634,8 @@ Vencimiento del pago: ${plazoPago}.`;
                                             })
                                         }
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : estado.clases
+                                            ? "bg-orange-500 text-white border-orange-500"
+                                            : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
@@ -677,8 +677,8 @@ Vencimiento del pago: ${plazoPago}.`;
                                                 })
                                             }
                                             className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
-                                                    ? "bg-orange-500 text-white border-orange-500"
-                                                    : "bg-white"
+                                                ? "bg-orange-500 text-white border-orange-500"
+                                                : "bg-white"
                                                 }`}
                                         >
                                             {metodo}
