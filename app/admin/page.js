@@ -116,7 +116,7 @@ export default function AdminPage() {
 
       const { data: perfil, error: perfilError } = await supabase
         .from("perfiles_admin")
-        .select("rol, activo, email")
+        .select("rol, activo, email, locacion")
         .eq("id", data.session.user.id)
         .single();
 
