@@ -315,7 +315,16 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
       const coincideTipo = filtroTipo === "Todos" || tipo === filtroTipo;
       const coincideEstado =
         filtroEstado === "Todos" || t.estado === filtroEstado;
-      const coincideSede = filtroSede === "Todas" || t.locacion === filtroSede;
+      const usuarioLimitadoPorSede =
+        rolAdmin === "operador" || rolAdmin === "admisionista";
+
+      const sedePermitida = usuarioLimitadoPorSede
+        ? perfilAdmin?.locacion
+        : filtroSede;
+
+      const coincideSede = usuarioLimitadoPorSede
+        ? t.locacion === sedePermitida
+        : filtroSede === "Todas" || t.locacion === filtroSede;
       const coincideFecha = !filtroFecha || t.fecha === filtroFecha;
 
       const texto = `${t.nombre || ""} ${t.dni || ""} ${t.celular || ""} ${t.locacion || ""
@@ -388,18 +397,27 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
             />
           </div>
 
-          <div>
-            <label className="text-xs text-slate-500">Tipo</label>
-            <select
-              value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value)}
-              className="border p-2 rounded-xl bg-white w-full"
-            >
-              {tiposTurno.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </div>
+          {rolAdmin === "operador" || rolAdmin === "admisionista" ? (
+            <div>
+              <label className="text-xs text-slate-500">Sede</label>
+              <div className="border p-2 rounded-xl bg-slate-100 text-sm">
+                {perfilAdmin?.locacion || "-"}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs text-slate-500">Sede</label>
+              <select
+                value={filtroSede}
+                onChange={(e) => setFiltroSede(e.target.value)}
+                className="border p-2 rounded-xl bg-white w-full"
+              >
+                {sedes.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="text-xs text-slate-500">Estado</label>
@@ -636,10 +654,10 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                         onClick={() => confirmarPago(t)}
                         disabled={!puedeConfirmarPago}
                         className={`px-3 py-2 rounded-xl text-sm font-semibold ${pagoConfirmado
-                            ? "bg-green-100 text-green-800 cursor-not-allowed"
-                            : puedeConfirmarPago
-                              ? "bg-green-600 hover:bg-green-700 text-white"
-                              : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                          ? "bg-green-100 text-green-800 cursor-not-allowed"
+                          : puedeConfirmarPago
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-slate-200 text-slate-500 cursor-not-allowed"
                           }`}
                       >
                         {pagoConfirmado
@@ -651,8 +669,8 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                         onClick={() => confirmarPenalidad(t)}
                         disabled={!puedeConfirmarPenalidad}
                         className={`px-3 py-2 rounded-xl text-sm font-semibold ${puedeConfirmarPenalidad
-                            ? "bg-purple-600 hover:bg-purple-700 text-white"
-                            : "bg-purple-100 text-purple-300 cursor-not-allowed"
+                          ? "bg-purple-600 hover:bg-purple-700 text-white"
+                          : "bg-purple-100 text-purple-300 cursor-not-allowed"
                           }`}
                       >
                         {t.penalidad_pagada
@@ -666,10 +684,10 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                         onClick={() => marcarRealizado(t)}
                         disabled={!puedeMarcarAsistencia}
                         className={`px-3 py-2 rounded-xl text-sm font-semibold ${t.estado === "Realizado"
-                            ? "bg-blue-100 text-blue-800 cursor-not-allowed"
-                            : puedeMarcarAsistencia
-                              ? "bg-blue-600 hover:bg-blue-700 text-white"
-                              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          ? "bg-blue-100 text-blue-800 cursor-not-allowed"
+                          : puedeMarcarAsistencia
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
+                            : "bg-slate-200 text-slate-400 cursor-not-allowed"
                           }`}
                       >
                         {t.estado === "Realizado"
@@ -681,10 +699,10 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
                         onClick={() => marcarAusente(t)}
                         disabled={!puedeMarcarAsistencia}
                         className={`px-3 py-2 rounded-xl text-sm font-semibold ${t.estado === "Ausente"
-                            ? "bg-slate-400 text-white cursor-not-allowed"
-                            : puedeMarcarAsistencia
-                              ? "bg-slate-800 hover:bg-slate-900 text-white"
-                              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          ? "bg-slate-400 text-white cursor-not-allowed"
+                          : puedeMarcarAsistencia
+                            ? "bg-slate-800 hover:bg-slate-900 text-white"
+                            : "bg-slate-200 text-slate-400 cursor-not-allowed"
                           }`}
                       >
                         {t.estado === "Ausente"
