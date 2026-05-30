@@ -449,7 +449,7 @@ ${form.locacion === "Sede Cipolletti"
             }
 
 ${form.tieneLaboratorioReciente === "No"
-                ? `Laboratorio: debe presentarse a las 07:00 hs.
+                ? `Laboratorio: debe presentarse desde las 07:00 hs hasta las 10:00.
 Dirección laboratorio: ${direccionesLaboratorio[form.locacion]}
 Indicaciones: ayuno mínimo de 8 horas.`
                 : `Laboratorio: usted indicó que posee estudios realizados dentro de los últimos 60 días.`
