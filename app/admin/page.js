@@ -386,7 +386,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl shadow grid md:grid-cols-6 gap-3 items-end">
+        <div className="bg-white p-4 rounded-2xl shadow grid md:grid-cols-5 gap-3 items-end">
           <div className="md:col-span-2">
             <label className="text-xs text-slate-500">Buscar</label>
             <input
@@ -395,6 +395,32 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
             />
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-500">Tipo</label>
+            <select
+              value={filtroTipo}
+              onChange={(e) => setFiltroTipo(e.target.value)}
+              className="border p-2 rounded-xl bg-white w-full"
+            >
+              {tiposTurno.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs text-slate-500">Estado</label>
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="border p-2 rounded-xl bg-white w-full"
+            >
+              {estados.map((e) => (
+                <option key={e}>{e}</option>
+              ))}
+            </select>
           </div>
 
           {rolAdmin === "operador" || rolAdmin === "admisionista" ? (
@@ -420,19 +446,6 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
           )}
 
           <div>
-            <label className="text-xs text-slate-500">Sede</label>
-            <select
-              value={filtroSede}
-              onChange={(e) => setFiltroSede(e.target.value)}
-              className="border p-2 rounded-xl bg-white w-full"
-            >
-              {sedes.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <label className="text-xs text-slate-500">Fecha</label>
             <input
               type="date"
@@ -442,7 +455,7 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
             />
           </div>
 
-          <div className="md:col-span-6 flex justify-between items-center pt-1">
+          <div className="md:col-span-5 flex justify-between items-center pt-1">
             <p className="text-xs text-slate-500">
               Mostrando {turnosFiltrados.length} turno
               {turnosFiltrados.length === 1 ? "" : "s"}
