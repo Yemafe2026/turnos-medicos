@@ -333,7 +333,7 @@ export default function ReprogramarClient({ token }) {
 
                     <input
                         type="date"
-                        className="w-full border rounded-xl p-3"
+                        className="w-full border-2 border-slate-400 rounded-xl p-3 text-slate-900 placeholder:text-slate-500"
                         value={fecha}
                         onChange={(e) => {
                             setFecha(e.target.value);
@@ -354,8 +354,8 @@ export default function ReprogramarClient({ token }) {
                                         disabled={estado.bloqueado}
                                         onClick={() => setHorario(hora)}
                                         className={`rounded-xl border p-4 text-left transition ${seleccionado
-                                                ? "bg-orange-500 text-white border-orange-500"
-                                                : estado.clases
+                                            ? "bg-orange-500 text-white border-orange-500"
+                                            : estado.clases
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
