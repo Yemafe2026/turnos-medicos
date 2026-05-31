@@ -182,6 +182,9 @@ async function enviarWhatsappPreReserva({
         },
         body: JSON.stringify({
             telefono: formatearTelefonoWhatsApp(telefono),
+            usarPlantilla: true,
+            nombrePlantilla: "prereserva_turno_medico_v2",
+            idioma: "es_AR",
             mensaje,
             variablesPlantilla,
         }),
