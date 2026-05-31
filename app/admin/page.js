@@ -61,7 +61,26 @@ function mostrarBeneficio(turno) {
 
   return "Estándar";
 }
+const direccionesCentroMedico = {
+  "Sede Cipolletti": "Alem 257",
+  "Sede Neuquén": "Cristóbal Colón 338",
+  "Sede Plaza Huincul": "A definir",
+};
 
+const laboratoriosPorSede = {
+  "Sede Cipolletti": "Laboratorios IDAC, ubicado en 25 de Mayo 523",
+  "Sede Neuquén": "Laboratorios CEIM, ubicado en Belgrano 1380",
+  "Sede Plaza Huincul": "laboratorio a definir",
+};
+
+function obtenerRecordatorioLaboratorio(turno) {
+  if (turno.laboratorio_reciente === "Sí") {
+    return "Presentar Hemograma y Glucemia en sangre vigentes hasta 60 días.";
+  }
+
+  return `Presentarse desde las 07:00 hs. a las 10:00 hs. en ${laboratoriosPorSede[turno.locacion] || "el laboratorio correspondiente"
+    }, con ayuno mínimo de 8 horas.`;
+}
 export default function AdminPage() {
   const router = useRouter();
 
@@ -169,15 +188,18 @@ export default function AdminPage() {
       },
       body: JSON.stringify({
         telefono: formatearTelefonoWhatsApp(turno.celular),
-        mensaje: `Hola ${turno.nombre}, tu turno fue CONFIRMADO.
-
-Fecha del Turno: ${turno.fecha}
-Horario del Turno: ${turno.horario}
-Sede: ${turno.locacion}
-
-Te esperamos.
-
-Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.`,
+        usarPlantilla: true,
+        nombrePlantilla: "confirmacion_turno_medico_v2",
+        idioma: "es_AR",
+        variablesPlantilla: [
+          turno.nombre || "-",
+          turno.tipo_turno || "Carnet Profesional",
+          turno.fecha || "-",
+          turno.horario || "-",
+          turno.locacion || "-",
+          direccionesCentroMedico[turno.locacion] || "-",
+          obtenerRecordatorioLaboratorio(turno),
+        ],
       }),
     });
 
@@ -256,11 +278,13 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
         },
         body: JSON.stringify({
           telefono: formatearTelefonoWhatsApp(turno.celular),
-          mensaje: `Hola ${turno.nombre}, registramos que no se presentó por segunda vez a su turno.
-
-Para solicitar una nueva atención deberá iniciar una nueva reserva desde el comienzo y abonar la totalidad del estudio correspondiente.
-
-Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 922.`,
+          usarPlantilla: true,
+          nombrePlantilla: "segunda_ausencia_turno",
+          idioma: "es_AR",
+          variablesPlantilla: [
+            turno.nombre || "-",
+            turno.tipo_turno || "Carnet Profesional",
+          ],
         }),
       });
 
@@ -268,7 +292,6 @@ Para realizar consultas, comuníquese al WhatsApp de atención: +54 9 299 5281 9
       volverAlTurno(turno.id);
       return;
     }
-
     const tokenReprogramacion =
       turno.token_reprogramacion || generarTokenReprogramacion();
 
