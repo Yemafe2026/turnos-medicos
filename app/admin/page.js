@@ -334,7 +334,7 @@ export default function AdminPage() {
       body: JSON.stringify({
         telefono: formatearTelefonoWhatsApp(turno.celular),
         usarPlantilla: true,
-        nombrePlantilla: "turno_ausente_reprogramar",
+        nombrePlantilla: "turno_ausente_reprogramar_v2",
         idioma: "es_AR",
         variablesPlantilla: [
           turno.nombre || "-",

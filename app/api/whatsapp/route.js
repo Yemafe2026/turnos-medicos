@@ -6,7 +6,7 @@ export async function POST(req) {
         const mensaje = String(body.mensaje || "").trim();
 
         const usarPlantilla = body.usarPlantilla === true;
-        const nombrePlantilla = body.nombrePlantilla || "prereserva_turno_medico";
+        const nombrePlantilla = body.nombrePlantilla || "prereserva_turno_medico_v2";
         const idioma = body.idioma || "es_AR";
         const variablesPlantilla = body.variablesPlantilla || [];
         const tokenBoton = body.tokenBoton || "";
