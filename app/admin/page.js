@@ -38,11 +38,30 @@ function generarTokenReprogramacion() {
 }
 
 function formatearTelefonoWhatsApp(celular) {
-  const limpio = String(celular || "").replace(/\D/g, "");
-  if (limpio.startsWith("54")) return limpio;
-  if (limpio.startsWith("29915")) return `54${limpio}`;
-  if (limpio.startsWith("299")) return `5429915${limpio.slice(3)}`;
-  if (limpio.startsWith("15")) return `54299${limpio}`;
+  let limpio = String(celular || "").replace(/\D/g, "");
+
+  if (limpio.startsWith("549")) return limpio;
+
+  if (limpio.startsWith("54")) {
+    limpio = limpio.slice(2);
+  }
+
+  if (limpio.startsWith("29915")) {
+    return `549299${limpio.slice(5)}`;
+  }
+
+  if (limpio.startsWith("2999")) {
+    return `54${limpio}`;
+  }
+
+  if (limpio.startsWith("299")) {
+    return `549299${limpio.slice(3)}`;
+  }
+
+  if (limpio.startsWith("15")) {
+    return `549299${limpio.slice(2)}`;
+  }
+
   return limpio;
 }
 
