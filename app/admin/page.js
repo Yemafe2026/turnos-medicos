@@ -115,8 +115,14 @@ export default function AdminPage() {
   const [perfilAdmin, setPerfilAdmin] = useState(null);
 
   const rolAdmin = perfilAdmin?.rol || "consulta";
-  const puedeGestionarPagos = ["super_admin", "admin"].includes(rolAdmin);
-  const puedeGestionarAsistencia = ["super_admin", "admin", "operador"].includes(rolAdmin);
+  const puedeGestionarPagos = ["super_admin", "supervisor", "admisionista"].includes(rolAdmin);
+
+  const puedeGestionarAsistencia = [
+    "super_admin",
+    "supervisor",
+    "admisionista",
+    "operador",
+  ].includes(rolAdmin);
 
   const volverAlTurno = (id) => {
     setTimeout(() => {
