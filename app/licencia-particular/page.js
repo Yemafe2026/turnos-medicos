@@ -544,7 +544,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         <h2 className="text-xl font-semibold">Datos del solicitante</h2>
 
                         <input
-                            className="w-full border rounded-xl p-3"
+                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
                             placeholder="Nombre y apellido"
                             value={form.nombre}
                             onChange={(e) =>
@@ -553,7 +553,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         />
 
                         <input
-                            className="w-full border rounded-xl p-3"
+                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
                             placeholder="DNI"
                             value={form.dni}
                             onChange={(e) =>
@@ -565,7 +565,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         />
 
                         <input
-                            className="w-full border rounded-xl p-3"
+                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
                             placeholder="Celular"
                             value={form.celular}
                             onChange={(e) =>
@@ -584,7 +584,7 @@ Vencimiento del pago: ${plazoPago}.`;
 
                         <input
                             type="date"
-                            className="w-full border rounded-xl p-3"
+                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
                             value={form.fecha}
                             onChange={(e) =>
                                 setForm({
@@ -862,13 +862,13 @@ Vencimiento del pago: ${plazoPago}.`;
 
                         <button
                             onClick={reiniciarFormulario}
-                            className="w-full border rounded-xl p-3"
+                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
                         >
                             Nueva solicitud
                         </button>
                     </div>
                 )}
             </div>
-        </main>
+        </main >
     );
 }

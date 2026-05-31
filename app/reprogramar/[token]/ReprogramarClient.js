@@ -333,7 +333,7 @@ export default function ReprogramarClient({ token }) {
 
                     <input
                         type="date"
-                        className="w-full border-2 border-slate-400 rounded-xl p-3 text-slate-900 placeholder:text-slate-500"
+                        className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
                         value={fecha}
                         onChange={(e) => {
                             setFecha(e.target.value);

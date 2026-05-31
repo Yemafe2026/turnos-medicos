@@ -34,17 +34,17 @@ export default function LoginAdmin() {
   return (
     <main className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow p-6 w-full max-w-md space-y-4">
-       <div className="text-center space-y-3">
-        <img
-          src="/logo.png"
-          alt="Laboral Salud"
-          className="h-20 mx-auto object-contain"
-        />
+        <div className="text-center space-y-3">
+          <img
+            src="/logo.png"
+            alt="Laboral Salud"
+            className="h-20 mx-auto object-contain"
+          />
 
-        <h1 className="text-2xl font-bold text-slate-800">
-          Ingreso Administración
-        </h1>
-       </div>
+          <h1 className="text-2xl font-bold text-slate-800">
+            Ingreso Administración
+          </h1>
+        </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -52,7 +52,7 @@ export default function LoginAdmin() {
           </label>
 
           <input
-            className="w-full border rounded-xl p-3"
+            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -66,7 +66,7 @@ export default function LoginAdmin() {
           </label>
 
           <input
-            className="w-full border rounded-xl p-3"
+            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -88,8 +88,8 @@ export default function LoginAdmin() {
           {cargando ? "Ingresando..." : "Ingresar"}
         </button>
         <div className="bg-slate-50 border rounded-xl p-3 text-sm text-slate-600">
-            Si olvidó su contraseña, solicite el restablecimiento al administrador general
-            por mail o WhatsApp.
+          Si olvidó su contraseña, solicite el restablecimiento al administrador general
+          por mail o WhatsApp.
         </div>
       </div>
     </main>
