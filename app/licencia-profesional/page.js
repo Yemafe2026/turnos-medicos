@@ -737,19 +737,25 @@ Vencimiento del pago: ${plazoPago}.`;
                             </div>
                         )}
 
-                        <input
-                            type="date"
-                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
-                            value={form.fecha}
-                            onChange={(e) =>
-                                setForm({
-                                    ...form,
-                                    fecha: e.target.value,
-                                    horario: "",
-                                    metodoPago: "",
-                                })
-                            }
-                        />
+                        <div className="space-y-2">
+                            <label className="block font-semibold text-slate-950">
+                                Seleccionar fecha
+                            </label>
+
+                            <input
+                                type="date"
+                                className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 bg-white font-medium"
+                                value={form.fecha}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        fecha: e.target.value,
+                                        horario: "",
+                                        metodoPago: "",
+                                    })
+                                }
+                            />
+                        </div>
 
                         <button
                             onClick={avanzarAPaso2}
