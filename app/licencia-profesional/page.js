@@ -770,17 +770,24 @@ Vencimiento del pago: ${plazoPago}.`;
                     <div className="bg-white rounded-2xl p-6 shadow space-y-4 text-slate-950">
                         <h2 className="text-xl font-semibold">Elegir horario</h2>
 
-                        <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
-                            <p><strong>Tipo:</strong> Licencia Profesional</p>
+                        <div className="bg-white border-2 border-slate-700 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-1">
+                            <p><strong>Tipo de turno:</strong> Licencia Profesional</p>
+                            <p><strong>Paciente:</strong> {form.nombre}</p>
+                            <p><strong>DNI:</strong> {form.dni}</p>
+                            <p><strong>Celular:</strong> {form.celular}</p>
+                            <p><strong>Mayor de 65:</strong> {form.mayor65}</p>
+                            <p><strong>Laboratorio reciente:</strong> {form.tieneLaboratorioReciente}</p>
                             <p><strong>Sede:</strong> {form.locacion}</p>
-                            <p><strong>Fecha:</strong> {form.fecha}</p>
+
                             {form.locacion === "Sede Cipolletti" && (
                                 <p><strong>Condición:</strong> {form.condicionBeneficio}</p>
                             )}
+
+                            <p><strong>Fecha:</strong> {form.fecha}</p>
                         </div>
 
                         {cargandoHorarios && (
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-slate-700 font-medium">
                                 Cargando disponibilidad...
                             </p>
                         )}
@@ -981,7 +988,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         )}
 
                         {form.tieneLaboratorioReciente === "Sí" && (
-                            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
+                            <div className="bg-green-50 border-2 border-green-600 rounded-xl p-4 text-sm text-slate-950 font-medium">
                                 Deberá presentar los estudios de laboratorio realizados dentro
                                 de los últimos 60 días.
                             </div>
@@ -1026,6 +1033,6 @@ Vencimiento del pago: ${plazoPago}.`;
                     </div>
                 )}
             </div>
-        </main>
+        </main >
     );
 }
