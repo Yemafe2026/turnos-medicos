@@ -603,7 +603,7 @@ Vencimiento del pago: ${plazoPago}.`;
 
                 {paso === 1 && (
                     <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-                        <h2 className="text-xl font-semibold">Datos del solicitante</h2>
+                        <h2 className="text-xl font-bold text-slate-950">Datos del solicitante</h2>
 
                         <input
                             className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
@@ -630,15 +630,15 @@ Vencimiento del pago: ${plazoPago}.`;
                             }
                         />
 
-                        <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
-                            <p className="font-semibold">¿Es mayor de 65 años?</p>
+                        <div className="bg-white border-2 border-slate-700 rounded-xl p-4 space-y-3">
+                            <p className="font-semibold text-slate-950">¿Es mayor de 65 años?</p>
                             <div className="grid grid-cols-2 gap-3">
                                 {["Sí", "No"].map((opcion) => (
                                     <button
                                         key={opcion}
                                         type="button"
                                         onClick={() => setForm({ ...form, mayor65: opcion })}
-                                        className={`border rounded-xl p-3 ${form.mayor65 === opcion ? "bg-orange-500 text-white border-orange-500" : "bg-white"}`}
+                                        className={`border-2 rounded-xl p-3 font-bold ${form.mayor65 === opcion ? "bg-orange-500 text-white border-orange-500" : "bg-white text-slate-950 border-slate-700"}`}
                                     >
                                         {opcion}
                                     </button>
@@ -647,7 +647,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         </div>
 
                         <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
-                            <p className="font-semibold">
+                            <p className="font-semibold text-slate-950">
                                 ¿Tiene estudios de laboratorio dentro de los últimos 60 días?
                             </p>
 
@@ -659,7 +659,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                         onClick={() =>
                                             setForm({ ...form, tieneLaboratorioReciente: opcion })
                                         }
-                                        className={`border rounded-xl p-3 ${form.tieneLaboratorioReciente === opcion ? "bg-orange-500 text-white border-orange-500" : "bg-white"}`}
+                                        className={`border-2 rounded-xl p-3 font-bold ${form.tieneLaboratorioReciente === opcion ? "bg-orange-500 text-white border-orange-500" : "bg-white text-slate-950 border-slate-700"}`}
                                     >
                                         {opcion}
                                     </button>
@@ -668,7 +668,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         </div>
 
                         <select
-                            className="w-full border rounded-xl p-3 bg-white"
+                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 bg-white font-medium"
                             value={form.locacion}
                             onChange={(e) =>
                                 setForm({
@@ -692,11 +692,10 @@ Vencimiento del pago: ${plazoPago}.`;
                         </select>
 
                         {form.locacion === "Sede Cipolletti" && (
-                            <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
-                                <p className="font-semibold">
+                            <div className="bg-white border-2 border-slate-700 rounded-xl p-4 space-y-3">
+                                <p className="font-semibold text-slate-950">
                                     ¿Pertenece a alguna de estas instituciones?
                                 </p>
-
                                 <div className="grid gap-3">
                                     {condicionesBeneficio.map((opcion) => (
                                         <button
@@ -762,7 +761,7 @@ Vencimiento del pago: ${plazoPago}.`;
                 )}
 
                 {paso === 2 && (
-                    <div className="bg-white rounded-2xl p-6 shadow space-y-4">
+                    <div className="bg-white rounded-2xl p-6 shadow space-y-4 text-slate-950">
                         <h2 className="text-xl font-semibold">Elegir horario</h2>
 
                         <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
@@ -945,7 +944,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                         <strong>+54 9 299 5281 922</strong>.
                                     </p>
 
-                                    <p className="font-semibold">
+                                    <p className="font-semibold text-slate-950">
                                         El turno será confirmado únicamente luego de recibir y validar
                                         el comprobante.
                                     </p>
