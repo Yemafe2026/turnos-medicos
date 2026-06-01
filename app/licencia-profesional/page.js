@@ -646,7 +646,7 @@ Vencimiento del pago: ${plazoPago}.`;
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 border rounded-xl p-4 space-y-3">
+                        <div className="bg-white border-2 border-slate-700 rounded-xl p-4 space-y-3">
                             <p className="font-semibold text-slate-950">
                                 ¿Tiene estudios de laboratorio dentro de los últimos 60 días?
                             </p>
