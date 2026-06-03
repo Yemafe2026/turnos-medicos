@@ -540,8 +540,8 @@ Vencimiento del pago: ${plazoPago}.`;
                 )}
 
                 {paso === 1 && (
-                    <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-                        <h2 className="text-xl font-semibold">Datos del solicitante</h2>
+                    <div className="bg-white rounded-2xl p-6 shadow space-y-4 text-slate-950">
+                        <h2 className="text-xl font-bold text-slate-950">Datos del solicitante</h2>
 
                         <input
                             className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
@@ -576,29 +576,35 @@ Vencimiento del pago: ${plazoPago}.`;
                             }
                         />
 
-                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-700">
+                        <div className="bg-blue-50 border-2 border-blue-600 rounded-xl p-4 text-sm text-slate-950 font-medium">
                             Este turno corresponde únicamente a{" "}
                             <strong>Licencia de Conducir Particular</strong> en la localidad
                             de <strong>Cipolletti</strong>.
                         </div>
 
-                        <input
-                            type="date"
-                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
-                            value={form.fecha}
-                            onChange={(e) =>
-                                setForm({
-                                    ...form,
-                                    fecha: e.target.value,
-                                    horario: "",
-                                    metodoPago: "",
-                                })
-                            }
-                        />
+                        <div className="space-y-2">
+                            <label className="block font-semibold text-slate-950">
+                                Seleccionar fecha
+                            </label>
+
+                            <input
+                                type="date"
+                                className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 bg-white font-medium"
+                                value={form.fecha}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        fecha: e.target.value,
+                                        horario: "",
+                                        metodoPago: "",
+                                    })
+                                }
+                            />
+                        </div>
 
                         <button
                             onClick={avanzarAPaso2}
-                            className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3"
+                            className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-xl p-3 font-semibold"
                         >
                             Continuar
                         </button>
@@ -606,10 +612,10 @@ Vencimiento del pago: ${plazoPago}.`;
                 )}
 
                 {paso === 2 && (
-                    <div className="bg-white rounded-2xl p-6 shadow space-y-4">
-                        <h2 className="text-xl font-semibold">Elegir horario</h2>
+                    <div className="bg-white rounded-2xl p-6 shadow space-y-4 text-slate-950">
+                        <h2 className="text-xl font-bold text-slate-950">Elegir horario</h2>
 
-                        <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+                        <div className="bg-white border-2 border-slate-700 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-1">
                             <p>
                                 <strong>Tipo:</strong> Licencia Particular
                             </p>
@@ -622,7 +628,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         </div>
 
                         {cargandoHorarios && (
-                            <p className="text-sm text-slate-500">
+                            <p className="text-sm text-slate-700 font-medium">
                                 Cargando disponibilidad...
                             </p>
                         )}
@@ -644,9 +650,9 @@ Vencimiento del pago: ${plazoPago}.`;
                                                 metodoPago: "",
                                             })
                                         }
-                                        className={`rounded-xl border p-4 text-left transition ${seleccionado
+                                        className={`rounded-xl border-2 p-4 text-left font-medium transition ${seleccionado
                                             ? "bg-orange-500 text-white border-orange-500"
-                                            : estado.clases
+                                            : `${estado.clases} border-slate-700`
                                             }`}
                                     >
                                         <div className="font-bold">{hora}</div>
@@ -657,22 +663,22 @@ Vencimiento del pago: ${plazoPago}.`;
                         </div>
 
                         {form.horario && (
-                            <div className="bg-white border rounded-2xl p-4 space-y-4">
-                                <h3 className="font-semibold">Método de pago</h3>
+                            <div className="bg-white border-2 border-slate-700 rounded-2xl p-4 space-y-4 text-slate-950">
+                                <h3 className="font-bold text-slate-950">Método de pago</h3>
 
                                 {!permiteEfectivo && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
-                                        Como el turno se reserva dentro de las próximas 24 hs, solo
-                                        se permite pago por transferencia bancaria. El pago debe
-                                        confirmarse dentro de los próximos 60 minutos.
+                                    <div className="bg-amber-50 border-2 border-amber-500 rounded-xl p-3 text-sm text-slate-950 font-medium">
+                                        Como el turno se reserva dentro de las próximas 24 hs,
+                                        solo se permite pago por transferencia bancaria.
+                                        El pago debe confirmarse dentro de los próximos 60 minutos.
                                     </div>
                                 )}
 
                                 {permiteEfectivo && (
-                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-slate-700">
+                                    <div className="bg-blue-50 border-2 border-blue-600 rounded-xl p-3 text-sm text-slate-950 font-medium">
                                         Como faltan más de 24 hs para el turno, puede pagar por
-                                        transferencia bancaria o en efectivo en sucursal. El pago
-                                        debe confirmarse hasta 24 hs antes del turno.
+                                        transferencia bancaria o en efectivo en sucursal.
+                                        El pago debe confirmarse hasta 24 hs antes del turno.
                                     </div>
                                 )}
 
@@ -687,9 +693,9 @@ Vencimiento del pago: ${plazoPago}.`;
                                                     metodoPago: metodo,
                                                 })
                                             }
-                                            className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
+                                            className={`border-2 rounded-xl p-3 text-left font-bold ${form.metodoPago === metodo
                                                 ? "bg-orange-500 text-white border-orange-500"
-                                                : "bg-white"
+                                                : "bg-white text-slate-950 border-slate-700"
                                                 }`}
                                         >
                                             {metodo}
@@ -698,7 +704,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                 </div>
 
                                 {form.metodoPago === "Transferencia" && (
-                                    <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+                                    <div className="bg-white border-2 border-slate-700 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-1">
                                         <p>
                                             <strong>Alias:</strong> {datosPago.alias}
                                         </p>
@@ -713,7 +719,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                 )}
 
                                 {form.metodoPago === "Efectivo en sucursal" && (
-                                    <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+                                    <div className="bg-white border-2 border-slate-700 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-1">
                                         <p>
                                             Puede abonar en efectivo en la sucursal de Cipolletti
                                             hasta 24 hs antes del turno.
@@ -729,7 +735,7 @@ Vencimiento del pago: ${plazoPago}.`;
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setPaso(1)}
-                                className="flex-1 border rounded-xl p-3"
+                                className="flex-1 border-2 border-slate-700 rounded-xl p-3 text-slate-950 font-semibold bg-white"
                             >
                                 Volver
                             </button>
@@ -746,19 +752,19 @@ Vencimiento del pago: ${plazoPago}.`;
                 )}
 
                 {paso === 3 && (
-                    <div className="bg-white rounded-2xl p-6 shadow space-y-5">
-                        <h2 className="text-xl font-semibold text-amber-700">
+                    <div className="bg-white rounded-2xl p-6 shadow space-y-5 text-slate-950">
+                        <h2 className="text-xl font-bold text-amber-700">
                             Solicitud generada
                         </h2>
 
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+                        <div className="bg-amber-50 border-2 border-amber-500 rounded-xl p-4 text-sm text-slate-950 font-medium">
                             Su horario quedó bloqueado provisoriamente.
                             <br />
                             Debe realizar el pago para confirmar definitivamente el turno.
                         </div>
 
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm space-y-3">
-                            <h3 className="font-semibold text-green-800">
+                        <div className="bg-green-50 border-2 border-green-600 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-3">
+                            <h3 className="font-bold text-green-900">
                                 Pago para confirmar el turno
                             </h3>
 
@@ -785,7 +791,7 @@ Vencimiento del pago: ${plazoPago}.`;
                             </p>
 
                             {form.metodoPago === "Transferencia" && (
-                                <div className="bg-white border rounded-xl p-4 text-sm space-y-1">
+                                <div className="bg-white border-2 border-slate-700 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-1">
                                     <p>
                                         <strong>Alias:</strong> {datosPago.alias}
                                     </p>
@@ -796,7 +802,7 @@ Vencimiento del pago: ${plazoPago}.`;
                             )}
 
                             {form.metodoPago === "Efectivo en sucursal" && (
-                                <div className="bg-white border rounded-xl p-4 text-sm space-y-1">
+                                <div className="bg-white border-2 border-slate-700 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-1">
                                     <p>Puede abonar en efectivo en la sucursal de Cipolletti.</p>
                                     <p>
                                         <strong>Dirección:</strong> {direccionCentroMedico}
@@ -804,19 +810,19 @@ Vencimiento del pago: ${plazoPago}.`;
                                 </div>
                             )}
 
-                            <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-5 space-y-3">
-                                <div className="text-red-700 font-bold text-lg flex items-center gap-2">
+                            <div className="bg-red-50 border-2 border-red-600 rounded-2xl p-5 space-y-3 text-slate-950 font-medium">
+                                <div className="text-red-800 font-bold text-lg flex items-center gap-2">
                                     ⚠️ Importante
                                 </div>
 
-                                <div className="text-sm text-red-800 space-y-2">
+                                <div className="text-sm text-red-900 space-y-2">
                                     <p>
                                         Una vez realizada la transferencia, deberá enviar el
                                         comprobante de pago vía WhatsApp al mismo número desde el
                                         cual recibirá el mensaje de pre-confirmación.
                                     </p>
 
-                                    <p className="font-semibold">
+                                    <p className="font-bold">
                                         El turno será confirmado únicamente luego de recibir y
                                         validar el comprobante.
                                     </p>
@@ -830,7 +836,7 @@ Vencimiento del pago: ${plazoPago}.`;
                             </div>
                         </div>
 
-                        <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
+                        <div className="bg-white border-2 border-slate-700 rounded-xl p-4 text-sm text-slate-950 font-medium space-y-1">
                             <p>
                                 <strong>Tipo de turno:</strong> Licencia Particular
                             </p>
@@ -862,13 +868,12 @@ Vencimiento del pago: ${plazoPago}.`;
 
                         <button
                             onClick={reiniciarFormulario}
-                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
+                            className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 bg-white font-semibold"
                         >
                             Nueva solicitud
                         </button>
                     </div>
-                )}
-            </div>
+                )}           </div>
         </main >
     );
 }
