@@ -471,7 +471,7 @@ ${form.locacion === "Sede Cipolletti"
             }
 
 ${form.tieneLaboratorioReciente === "No"
-                ? `Laboratorio: debe presentarse desde las 07:00 hs hasta las 10:00.
+                ? `Laboratorio: debe presentarse desde las 08:00 hs hasta las 10:00.
 Dirección laboratorio: ${direccionesLaboratorio[form.locacion]}
 Indicaciones: ayuno mínimo de 8 horas.`
                 : `Laboratorio: usted indicó que posee estudios realizados dentro de los últimos 60 días.`
@@ -976,7 +976,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                 <h3 className="font-semibold text-blue-800">
                                     Indicaciones de laboratorio
                                 </h3>
-                                <p>Debe presentarse entre las <strong>07:00 hs y las 10:00 hs.</strong>.</p>
+                                <p>Debe presentarse entre las <strong>08:00 hs y las 10:00 hs.</strong>.</p>
                                 <p>
                                     <strong>Dirección:</strong>{" "}
                                     {direccionesLaboratorio[form.locacion]}
