@@ -825,7 +825,7 @@ Vencimiento del pago: ${plazoPago}.`;
                                         Importe del servicio
                                     </p>
                                     <p className="text-2xl font-bold text-green-900">
-                                        {formatearImporte(importeServicio)} + IVA (21%)
+                                        {formatearImporte(importeServicio)}
                                     </p>
                                 </div>
 
@@ -926,7 +926,7 @@ Vencimiento del pago: ${plazoPago}.`;
 
                             <p>
                                 <strong>Importe del servicio:</strong>{" "}
-                                {formatearImporte(importeServicio)} + IVA (21%)
+                                {formatearImporte(importeServicio)}
                             </p>
 
                             <p>
@@ -1013,7 +1013,7 @@ Vencimiento del pago: ${plazoPago}.`;
                             )}
                             <p>
                                 <strong>Importe:</strong>{" "}
-                                {formatearImporte(importeServicio)} + IVA (21%)
+                                {formatearImporte(importeServicio)}
                             </p>
                             <p>
                                 <strong>Dirección:</strong>{" "}
