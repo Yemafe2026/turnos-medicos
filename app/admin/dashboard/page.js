@@ -35,6 +35,7 @@ function obtenerMes(fecha) {
 
 function resumenVacio() {
     return {
+        confirmados: 0,
         certificados: 0,
         facturacion: 0,
         prereservasCaidas: 0,
@@ -121,6 +122,8 @@ export default function AdminDashboardPage() {
         return turnosFiltrados.reduce((acc, t) => {
             const estado = t.estado || "";
 
+            if (estado === "Confirmado") acc.confirmados += 1;
+
             if (estado === "Realizado") acc.certificados += 1;
 
             if (t.pagado === true) {
@@ -155,6 +158,8 @@ export default function AdminDashboardPage() {
             const estado = t.estado || "";
 
             if (!mapa[sede]) mapa[sede] = resumenVacio();
+
+            if (estado === "Confirmado") mapa[sede].confirmados += 1;
 
             if (estado === "Realizado") mapa[sede].certificados += 1;
 
@@ -282,7 +287,14 @@ export default function AdminDashboardPage() {
                     </div>
                 ) : (
                     <>
-                        <div className="grid md:grid-cols-3 xl:grid-cols-6 gap-3">
+                        <div className="grid md:grid-cols-3 xl:grid-cols-7 gap-3">
+                            <div className="bg-white p-4 rounded-2xl shadow">
+                                <p className="text-xs text-slate-500">Confirmados</p>
+                                <p className="text-3xl font-bold text-green-700">
+                                    {resumenGeneral.confirmados}
+                                </p>
+                            </div>
+
                             <div className="bg-white p-4 rounded-2xl shadow">
                                 <p className="text-xs text-slate-500">Certificados emitidos</p>
                                 <p className="text-3xl font-bold">{resumenGeneral.certificados}</p>
@@ -332,6 +344,7 @@ export default function AdminDashboardPage() {
                                     <thead>
                                         <tr className="border-b bg-slate-50 text-left">
                                             <th className="p-3">Sede</th>
+                                            <th className="p-3">Confirmados</th>
                                             <th className="p-3">Certificados</th>
                                             <th className="p-3">Facturación</th>
                                             <th className="p-3">Caídas</th>
@@ -345,6 +358,7 @@ export default function AdminDashboardPage() {
                                         {resumenPorSede.map((fila) => (
                                             <tr key={fila.sede} className="border-b">
                                                 <td className="p-3 font-semibold">{fila.sede}</td>
+                                                <td className="p-3">{fila.confirmados}</td>
                                                 <td className="p-3">{fila.certificados}</td>
                                                 <td className="p-3 font-semibold">
                                                     {formatearImporte(fila.facturacion)}
