@@ -21,22 +21,19 @@ export default function Home() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-5">
-          <Link
-            href="/licencia-particular"
-            className="bg-white rounded-2xl p-6 shadow hover:shadow-lg transition border hover:border-orange-500"
-          >
-            <h2 className="text-xl font-bold text-slate-800 mb-2">
+          <div className="bg-slate-100 rounded-2xl p-6 shadow border border-slate-300 opacity-80 cursor-not-allowed">
+            <h2 className="text-xl font-bold text-slate-700 mb-2">
               Licencia de Conducir Particular
             </h2>
 
-            <p className="text-slate-600 text-sm">
+            <p className="text-slate-500 text-sm">
               Turnos médicos para licencia de conducir particular.
             </p>
 
-            <div className="mt-5 bg-orange-500 text-white rounded-xl p-3 text-center font-semibold">
-              Solicitar turno particular
+            <div className="mt-5 bg-slate-300 text-slate-600 rounded-xl p-3 text-center font-semibold">
+              Temporalmente no disponible
             </div>
-          </Link>
+          </div>
 
           <Link
             href="/licencia-profesional"
