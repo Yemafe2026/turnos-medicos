@@ -148,6 +148,16 @@ function formatearPlazoPago(fecha, horario, vencimientoISO) {
     return "60 minutos desde la generación de la pre-reserva";
 }
 
+function esDiaHabil(fecha) {
+    if (!fecha) return false;
+
+    const [anio, mes, dia] = fecha.split("-").map(Number);
+    const fechaLocal = new Date(anio, mes - 1, dia);
+    const diaSemana = fechaLocal.getDay();
+
+    return diaSemana !== 0 && diaSemana !== 6;
+}
+
 async function validarIdentidadPaciente(nombre, dni) {
     const nombreLimpio = nombre.trim();
     const nombreNormalizado = normalizarTexto(nombreLimpio);
@@ -359,6 +369,15 @@ export default function LicenciaProfesionalPage() {
                 setError("Complete todos los datos antes de continuar.");
                 return;
             }
+
+            // NO PERMITIR SÁBADOS NI DOMINGOS
+            if (!esDiaHabil(form.fecha)) {
+                setError(
+                    "Seleccione una fecha de lunes a viernes. No se toman turnos sábados ni domingos."
+                );
+                return;
+            }
+
 
             const celularLimpio = normalizarCelular(form.celular);
             const dniLimpio = String(form.dni || "").replace(/\D/g, "");
