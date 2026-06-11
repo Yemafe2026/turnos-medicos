@@ -263,7 +263,10 @@ export default function AdminDashboardPage() {
 
             tasaCaidos: porcentaje(
                 resumenGeneral.prereservasCaidas,
-                confirmados + emitidos + resumenGeneral.ausentes
+                confirmados +
+                emitidos +
+                resumenGeneral.prereservasCaidas +
+                resumenGeneral.ausentes
             ),
 
             tasaAusentes: porcentaje(
@@ -645,7 +648,10 @@ export default function AdminDashboardPage() {
                                                     {formatearPorcentaje(
                                                         porcentaje(
                                                             fila.prereservasCaidas,
-                                                            fila.confirmados + fila.certificados + fila.ausentes
+                                                            fila.confirmados +
+                                                            fila.certificados +
+                                                            fila.prereservasCaidas +
+                                                            fila.ausentes
                                                         )
                                                     )}
                                                 </td>
@@ -810,7 +816,10 @@ export default function AdminDashboardPage() {
                                                             {formatearPorcentaje(
                                                                 porcentaje(
                                                                     fila.caidas,
-                                                                    fila.confirmados + fila.certificados + fila.ausentes
+                                                                    fila.confirmados +
+                                                                    fila.certificados +
+                                                                    fila.caidas +
+                                                                    fila.ausentes
                                                                 )
                                                             )}
                                                         </td>
