@@ -117,7 +117,6 @@ function faltanMasDe24Horas(fecha, horario) {
 }
 
 function calcularVencimientoPago(fecha, horario) {
-    const ahora = new Date();
     const fechaTurno = obtenerFechaHoraTurno(fecha, horario);
 
     if (faltanMasDe24Horas(fecha, horario)) {
@@ -126,8 +125,8 @@ function calcularVencimientoPago(fecha, horario) {
         return vencimiento.toISOString();
     }
 
-    const vencimiento = new Date(ahora);
-    vencimiento.setMinutes(vencimiento.getMinutes() + 60);
+    const vencimiento = new Date(fechaTurno);
+    vencimiento.setHours(vencimiento.getHours() - 1);
     return vencimiento.toISOString();
 }
 

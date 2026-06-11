@@ -4,7 +4,28 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../supabase";
 
-const sedes = ["Todas", "Sede Cipolletti", "Sede Neuquén", "Sede Plaza Huincul"];
+const SEDES_OPERATIVAS = [
+    "Sede Cipolletti",
+    "Sede Neuquén",
+    "Sede Plaza Huincul",
+];
+
+const sedes = ["Todas", ...SEDES_OPERATIVAS];
+
+const ORDEN_SEDES = SEDES_OPERATIVAS.reduce((acc, sede, index) => {
+    acc[sede] = index + 1;
+    return acc;
+}, {});
+
+const indicadoresHistoricos = [
+    { value: "certificados", label: "Certificados emitidos" },
+    { value: "facturacion", label: "Facturación" },
+    { value: "ausentes", label: "Ausentes" },
+    { value: "porcentajeAusentes", label: "% Ausentes" },
+    { value: "caidas", label: "Caídas" },
+    { value: "porcentajeCaidas", label: "% Caídas" },
+];
+
 const meses = [
     { value: "Todos", label: "Todos" },
     { value: "01", label: "Enero" },
@@ -45,6 +66,53 @@ function resumenVacio() {
     };
 }
 
+function porcentaje(numerador, denominador) {
+    if (!denominador || denominador <= 0) return 0;
+    return (numerador / denominador) * 100;
+}
+
+function formatearPorcentaje(valor) {
+    return `${Number(valor || 0).toFixed(1)}%`;
+}
+function esDiaHabil(fecha) {
+    const dia = fecha.getDay();
+    return dia !== 0 && dia !== 6;
+}
+
+function contarDiasHabilesDesdeHasta(fechaInicio, fechaFin) {
+    if (!fechaInicio || !fechaFin) return 1;
+
+    const inicio = new Date(fechaInicio);
+    const fin = new Date(fechaFin);
+
+    inicio.setHours(0, 0, 0, 0);
+    fin.setHours(0, 0, 0, 0);
+
+    let contador = 0;
+    const fechaActual = new Date(inicio);
+
+    while (fechaActual <= fin) {
+        if (esDiaHabil(fechaActual)) {
+            contador += 1;
+        }
+
+        fechaActual.setDate(fechaActual.getDate() + 1);
+    }
+
+    return Math.max(contador, 1);
+}
+
+function obtenerUltimoDiaDelMes(anio, mes) {
+    return new Date(Number(anio), Number(mes), 0);
+
+}
+function contarDiasHabilesDelMes(anio, mes) {
+    const inicio = new Date(Number(anio), Number(mes) - 1, 1);
+    const fin = obtenerUltimoDiaDelMes(anio, mes);
+
+    return contarDiasHabilesDesdeHasta(inicio, fin);
+}
+
 export default function AdminDashboardPage() {
     const router = useRouter();
 
@@ -55,6 +123,11 @@ export default function AdminDashboardPage() {
     const [filtroAnio, setFiltroAnio] = useState(String(new Date().getFullYear()));
     const [filtroMes, setFiltroMes] = useState("Todos");
     const [filtroSede, setFiltroSede] = useState("Todas");
+    const [mostrarHistorico, setMostrarHistorico] = useState(false);
+    const [historicoAnio, setHistoricoAnio] = useState(String(new Date().getFullYear()));
+    const [historicoMes, setHistoricoMes] = useState("Todos");
+    const [historicoSede, setHistoricoSede] = useState("Todas");
+    const [historicoIndicador, setHistoricoIndicador] = useState("certificados");
 
     const rolAdmin = perfilAdmin?.rol || "consulta";
     const usuarioLimitadoPorSede =
@@ -149,6 +222,61 @@ export default function AdminDashboardPage() {
             return acc;
         }, resumenVacio());
     }, [turnosFiltrados]);
+    const diasTranscurridos = useMemo(() => {
+        if (turnosFiltrados.length === 0) return 1;
+
+        const fechasValidas = turnosFiltrados
+            .map((t) => t.fecha)
+            .filter(Boolean)
+            .sort();
+
+        if (fechasValidas.length === 0) return 1;
+
+        const primeraFecha = fechasValidas[0];
+
+        const hoy = new Date();
+        const anioActual = String(hoy.getFullYear());
+        const mesActual = String(hoy.getMonth() + 1).padStart(2, "0");
+
+        let fechaFin = hoy;
+
+        if (
+            filtroAnio !== "Todos" &&
+            filtroMes !== "Todos" &&
+            !(filtroAnio === anioActual && filtroMes === mesActual)
+        ) {
+            fechaFin = obtenerUltimoDiaDelMes(filtroAnio, filtroMes);
+        }
+
+        return contarDiasHabilesDesdeHasta(primeraFecha, fechaFin);
+    }, [turnosFiltrados, filtroAnio, filtroMes]);
+
+    const indicadoresGenerales = useMemo(() => {
+        const emitidos = resumenGeneral.certificados;
+        const confirmados = resumenGeneral.confirmados;
+
+        return {
+            certificadosPorDia:
+                diasTranscurridos > 0
+                    ? emitidos / diasTranscurridos
+                    : 0,
+
+            tasaCaidos: porcentaje(
+                resumenGeneral.prereservasCaidas,
+                confirmados + emitidos + resumenGeneral.ausentes
+            ),
+
+            tasaAusentes: porcentaje(
+                resumenGeneral.ausentes,
+                confirmados + emitidos + resumenGeneral.ausentes
+            ),
+
+            tasaReprogramacionAusentes: porcentaje(
+                resumenGeneral.ausentesReprogramadas,
+                resumenGeneral.ausentes
+            ),
+        };
+    }, [resumenGeneral, diasTranscurridos]);
 
     const resumenPorSede = useMemo(() => {
         const mapa = {};
@@ -184,7 +312,86 @@ export default function AdminDashboardPage() {
             }
         });
 
-        return Object.entries(mapa).map(([sede, datos]) => ({ sede, ...datos }));
+        const ordenSedes = ORDEN_SEDES;
+
+        return Object.entries(mapa)
+            .map(([sede, datos]) => ({ sede, ...datos }))
+            .sort((a, b) => {
+                return (
+                    (ordenSedes[a.sede] || 999) -
+                    (ordenSedes[b.sede] || 999)
+                );
+            });
+    }, [turnosFiltrados]);
+
+    const resumenMensual = useMemo(() => {
+        const mapa = {};
+
+        turnosFiltrados.forEach((t) => {
+            const fecha = t.fecha || "";
+            const anio = obtenerAnio(fecha);
+            const mes = obtenerMes(fecha);
+            const sede = t.locacion || "Sin sede";
+
+            if (!anio || !mes) return;
+
+            const clave = `${anio}-${mes}-${sede}`;
+            const estado = t.estado || "";
+
+            if (!mapa[clave]) {
+                mapa[clave] = {
+                    periodo: `${anio}-${mes}`,
+                    anio,
+                    mes,
+                    sede,
+                    confirmados: 0,
+                    certificados: 0,
+                    facturacion: 0,
+                    caidas: 0,
+                    ausentes: 0,
+                    ausentesReprogramadas: 0,
+                    reprogramadasAusentes: 0,
+                };
+            }
+
+            if (estado === "Confirmado") mapa[clave].confirmados += 1;
+            if (estado === "Realizado") mapa[clave].certificados += 1;
+
+            if (t.pagado === true) {
+                mapa[clave].facturacion += Number(t.importe_servicio || 0);
+            }
+
+            if (estado === "No Confirmado" || estado === "Cancelado") {
+                mapa[clave].caidas += 1;
+            }
+
+            if (estado === "Ausente") {
+                mapa[clave].ausentes += 1;
+            }
+
+            if (t.es_reprogramacion === true) {
+                mapa[clave].ausentesReprogramadas += 1;
+            }
+
+            if (t.es_reprogramacion === true && estado === "Ausente") {
+                mapa[clave].reprogramadasAusentes += 1;
+            }
+        });
+
+        const ordenSedes = ORDEN_SEDES;
+
+        return Object.values(mapa).sort((a, b) => {
+            const comparacionPeriodo = a.periodo.localeCompare(b.periodo);
+
+            if (comparacionPeriodo !== 0) {
+                return comparacionPeriodo;
+            }
+
+            return (
+                (ordenSedes[a.sede] || 999) -
+                (ordenSedes[b.sede] || 999)
+            );
+        });
     }, [turnosFiltrados]);
 
     return (
@@ -273,21 +480,26 @@ export default function AdminDashboardPage() {
 
                     <div className="flex items-end">
                         <div className="text-sm text-slate-500">
-                            Registros analizados:{" "}
-                            <span className="font-bold text-slate-900">
-                                {turnosFiltrados.length}
-                            </span>
+                            <p>
+                                Registros analizados:{" "}
+                                <span className="font-bold text-slate-900">
+                                    {turnosFiltrados.length}
+                                </span>
+                            </p>
+
+                            <p className="text-xs text-slate-400 mt-1">
+                                Dashboard operativo filtrado por período y sede seleccionados
+                            </p>
                         </div>
                     </div>
                 </div>
-
                 {cargando ? (
                     <div className="bg-white p-6 rounded-2xl shadow text-sm">
                         Cargando indicadores...
                     </div>
                 ) : (
                     <>
-                        <div className="grid md:grid-cols-3 xl:grid-cols-7 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                             <div className="bg-white p-4 rounded-2xl shadow">
                                 <p className="text-xs text-slate-500">Confirmados</p>
                                 <p className="text-3xl font-bold text-green-700">
@@ -335,6 +547,59 @@ export default function AdminDashboardPage() {
                                 </p>
                             </div>
                         </div>
+                        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-3">
+
+                            <div className="bg-white p-4 rounded-2xl shadow">
+                                <p className="text-xs text-slate-500">
+                                    Certificados / día
+                                </p>
+
+                                <p className="text-3xl font-bold text-blue-700">
+                                    {indicadoresGenerales.certificadosPorDia.toFixed(2)}
+                                </p>
+
+                                <p className="text-xs text-slate-400 mt-2">
+                                    Calculado sobre {diasTranscurridos} días hábiles
+                                </p>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl shadow">
+                                <p className="text-xs text-slate-500">
+                                    Tasa de caídos
+                                </p>
+
+                                <p className="text-3xl font-bold text-amber-700">
+                                    {formatearPorcentaje(
+                                        indicadoresGenerales.tasaCaidos
+                                    )}
+                                </p>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl shadow">
+                                <p className="text-xs text-slate-500">
+                                    Tasa de ausentes
+                                </p>
+
+                                <p className="text-3xl font-bold text-red-700">
+                                    {formatearPorcentaje(
+                                        indicadoresGenerales.tasaAusentes
+                                    )}
+                                </p>
+                            </div>
+
+                            <div className="bg-white p-4 rounded-2xl shadow">
+                                <p className="text-xs text-slate-500">
+                                    Recuperación de ausentes
+                                </p>
+
+                                <p className="text-3xl font-bold text-purple-700">
+                                    {formatearPorcentaje(
+                                        indicadoresGenerales.tasaReprogramacionAusentes
+                                    )}
+                                </p>
+                            </div>
+
+                        </div>
 
                         <div className="bg-white p-4 rounded-2xl shadow">
                             <h2 className="font-semibold mb-3">Resumen por sede</h2>
@@ -351,6 +616,10 @@ export default function AdminDashboardPage() {
                                             <th className="p-3">Ausentes</th>
                                             <th className="p-3">Ausentes reprogramadas</th>
                                             <th className="p-3">Reprogramadas ausentes</th>
+                                            <th className="p-3">Cert./día</th>
+                                            <th className="p-3">% Caídas</th>
+                                            <th className="p-3">% Ausentes</th>
+                                            <th className="p-3">% Reprog. ausentes</th>
                                         </tr>
                                     </thead>
 
@@ -367,12 +636,43 @@ export default function AdminDashboardPage() {
                                                 <td className="p-3">{fila.ausentes}</td>
                                                 <td className="p-3">{fila.ausentesReprogramadas}</td>
                                                 <td className="p-3">{fila.reprogramadasAusentes}</td>
+
+                                                <td className="p-3">
+                                                    {(fila.certificados / diasTranscurridos).toFixed(2)}
+                                                </td>
+
+                                                <td className="p-3">
+                                                    {formatearPorcentaje(
+                                                        porcentaje(
+                                                            fila.prereservasCaidas,
+                                                            fila.confirmados + fila.certificados + fila.ausentes
+                                                        )
+                                                    )}
+                                                </td>
+
+                                                <td className="p-3">
+                                                    {formatearPorcentaje(
+                                                        porcentaje(
+                                                            fila.ausentes,
+                                                            fila.confirmados + fila.certificados + fila.ausentes
+                                                        )
+                                                    )}
+                                                </td>
+
+                                                <td className="p-3">
+                                                    {formatearPorcentaje(
+                                                        porcentaje(
+                                                            fila.ausentesReprogramadas,
+                                                            fila.ausentes
+                                                        )
+                                                    )}
+                                                </td>
                                             </tr>
                                         ))}
 
                                         {resumenPorSede.length === 0 && (
                                             <tr>
-                                                <td colSpan="7" className="p-4 text-slate-500">
+                                                <td colSpan="12" className="p-4 text-slate-500">
                                                     No hay datos para los filtros seleccionados.
                                                 </td>
                                             </tr>
@@ -381,9 +681,167 @@ export default function AdminDashboardPage() {
                                 </table>
                             </div>
                         </div>
+                        <div className="bg-white p-4 rounded-2xl shadow">
+                            <button
+                                onClick={() => setMostrarHistorico(!mostrarHistorico)}
+                                className="w-full flex justify-between items-center text-left"
+                            >
+                                <span className="font-semibold">
+                                    Análisis histórico
+                                </span>
+
+                                <span className="text-sm text-slate-500">
+                                    {mostrarHistorico ? "Ocultar" : "Mostrar"}
+                                </span>
+                            </button>
+                        </div>
+                        {mostrarHistorico && (
+                            <div className="bg-white p-4 rounded-2xl shadow">
+                                <h2 className="font-semibold mb-3">Resumen mensual</h2>
+                                <div className="grid md:grid-cols-4 gap-3 mb-4">
+
+                                    <select
+                                        value={historicoAnio}
+                                        onChange={(e) => setHistoricoAnio(e.target.value)}
+                                        className="border p-2 rounded-xl bg-white"
+                                    >
+                                        {aniosDisponibles.map((anio) => (
+                                            <option key={anio} value={anio}>
+                                                {anio}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={historicoMes}
+                                        onChange={(e) => setHistoricoMes(e.target.value)}
+                                        className="border p-2 rounded-xl bg-white"
+                                    >
+                                        {meses.map((mes) => (
+                                            <option key={mes.value} value={mes.value}>
+                                                {mes.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={historicoSede}
+                                        onChange={(e) => setHistoricoSede(e.target.value)}
+                                        className="border p-2 rounded-xl bg-white"
+                                    >
+                                        {sedes.map((sede) => (
+                                            <option key={sede} value={sede}>
+                                                {sede}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    <select
+                                        value={historicoIndicador}
+                                        onChange={(e) => setHistoricoIndicador(e.target.value)}
+                                        className="border p-2 rounded-xl bg-white"
+                                    >
+                                        {indicadoresHistoricos.map((indicador) => (
+                                            <option
+                                                key={indicador.value}
+                                                value={indicador.value}
+                                            >
+                                                {indicador.label}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-b bg-slate-50 text-left">
+                                                <th className="p-3">Mes</th>
+                                                <th className="p-3">Sede</th>
+                                                <th className="p-3">Confirmados</th>
+                                                <th className="p-3">Certificados</th>
+                                                <th className="p-3">Facturación</th>
+                                                <th className="p-3">Caídas</th>
+                                                <th className="p-3">Ausentes</th>
+                                                <th className="p-3">Ausentes reprogramadas</th>
+                                                <th className="p-3">Reprogramadas ausentes</th>
+                                                <th className="p-3">Cert./día</th>
+                                                <th className="p-3">% Caídas</th>
+                                                <th className="p-3">% Ausentes</th>
+                                                <th className="p-3">% Reprog. ausentes</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {resumenMensual
+                                                .filter((fila) => {
+                                                    const coincideAnio = fila.anio === historicoAnio;
+
+                                                    const coincideMes =
+                                                        historicoMes === "Todos" ||
+                                                        fila.mes === historicoMes;
+
+                                                    const coincideSede =
+                                                        historicoSede === "Todas" ||
+                                                        fila.sede === historicoSede;
+
+                                                    return coincideAnio && coincideMes && coincideSede;
+                                                })
+                                                .map((fila) => (
+                                                    <tr key={`${fila.periodo}-${fila.sede}`} className="border-b">
+                                                        <td className="p-3 font-semibold">{fila.periodo}</td>
+                                                        <td className="p-3">{fila.sede}</td>
+                                                        <td className="p-3">{fila.confirmados}</td>
+                                                        <td className="p-3">{fila.certificados}</td>
+                                                        <td className="p-3 font-semibold">
+                                                            {formatearImporte(fila.facturacion)}
+                                                        </td>
+                                                        <td className="p-3">{fila.caidas}</td>
+                                                        <td className="p-3">{fila.ausentes}</td>
+                                                        <td className="p-3">{fila.ausentesReprogramadas}</td>
+                                                        <td className="p-3">{fila.reprogramadasAusentes || 0}</td>
+
+                                                        <td className="p-3">
+                                                            {(
+                                                                fila.certificados /
+                                                                contarDiasHabilesDelMes(fila.anio, fila.mes)
+                                                            ).toFixed(2)}
+                                                        </td>
+
+                                                        <td className="p-3">
+                                                            {formatearPorcentaje(
+                                                                porcentaje(
+                                                                    fila.caidas,
+                                                                    fila.confirmados + fila.certificados + fila.ausentes
+                                                                )
+                                                            )}
+                                                        </td>
+
+                                                        <td className="p-3">
+                                                            {formatearPorcentaje(
+                                                                porcentaje(
+                                                                    fila.ausentes,
+                                                                    fila.confirmados + fila.certificados + fila.ausentes
+                                                                )
+                                                            )}
+                                                        </td>
+
+                                                        <td className="p-3">
+                                                            {formatearPorcentaje(
+                                                                porcentaje(
+                                                                    fila.ausentesReprogramadas,
+                                                                    fila.ausentes
+                                                                )
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
-        </main>
+        </main >
     );
 }
