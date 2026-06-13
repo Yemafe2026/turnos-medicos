@@ -551,7 +551,10 @@ export default function AdminPage() {
                 <div
                   key={t.id}
                   id={`turno-${t.id}`}
-                  className="bg-white rounded-2xl shadow border border-slate-100 p-4"
+                  className={`rounded-2xl shadow border p-4 ${t.mayor65 === true || t.mayor65 === "Sí"
+                      ? "bg-red-100 border-red-500"
+                      : "bg-white border-slate-100"
+                    }`}
                 >
                   <div className="grid grid-cols-12 gap-4 items-stretch">
                     <div className="col-span-12 md:col-span-2 border-r md:pr-4 flex gap-3 items-center">
@@ -563,9 +566,15 @@ export default function AdminPage() {
                         <p className="font-bold text-slate-900">
                           {t.nombre || "-"}
                         </p>
+
+                        <p className="text-red-600 text-xs">
+                          mayor65: {String(t.mayor65)}
+                        </p>
+
                         <p className="text-sm text-slate-600">
                           DNI: {t.dni || "-"}
                         </p>
+
                         <p className="text-sm text-blue-700">
                           {t.celular || "-"}
                         </p>

@@ -496,7 +496,17 @@ Indicaciones: ayuno mínimo de 8 horas.`
             }
 
 ${form.mayor65 === "Sí"
-                ? `Importante: por ser mayor de 65 años, requiere coordinación especial previa.`
+                ? `
+
+🚨 IMPORTANTE - MAYOR DE 65 AÑOS
+
+Por normativa vigente, las personas mayores de 65 años requieren una evaluación médica y/o documentación complementaria previa a la emisión del certificado.
+
+Nuestro equipo administrativo se comunicará para coordinar los pasos necesarios antes de confirmar la continuidad del trámite.
+
+No concurra a realizar estudios complementarios ni efectúe pagos adicionales hasta recibir las indicaciones de nuestro equipo.
+
+`
                 : ``
             }
 
@@ -936,7 +946,24 @@ Vencimiento del pago: ${plazoPago}.`;
                             <br />
                             Debe realizar el pago para confirmar definitivamente el turno.
                         </div>
+                        {form.mayor65 === "Sí" && (
+                            <div className="bg-red-200 border-2 border-red-600 rounded-2xl p-5 text-sm space-y-2">
+                                <div className="text-red-900 font-bold text-lg">
+                                    🚨 IMPORTANTE - MAYOR DE 65 AÑOS
+                                </div>
 
+                                <p className="text-red-950 font-medium">
+                                    Por normativa vigente, las personas mayores de 65 años requieren
+                                    una evaluación médica y/o documentación complementaria previa a la
+                                    emisión del certificado.
+                                </p>
+
+                                <p className="text-red-950 font-semibold">
+                                    Nuestro equipo administrativo se comunicará para coordinar los pasos
+                                    necesarios antes de confirmar la continuidad del trámite.
+                                </p>
+                            </div>
+                        )}
                         <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm space-y-3">
                             <h3 className="font-semibold text-green-800">
                                 Pago para confirmar el turno
