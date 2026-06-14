@@ -496,17 +496,7 @@ Indicaciones: ayuno mínimo de 8 horas.`
             }
 
 ${form.mayor65 === "Sí"
-                ? `
-
-🚨 IMPORTANTE - MAYOR DE 65 AÑOS
-
-Por normativa vigente, las personas mayores de 65 años requieren una evaluación médica y/o documentación complementaria previa a la emisión del certificado.
-
-Nuestro equipo administrativo se comunicará para coordinar los pasos necesarios antes de confirmar la continuidad del trámite.
-
-No concurra a realizar estudios complementarios ni efectúe pagos adicionales hasta recibir las indicaciones de nuestro equipo.
-
-`
+                ? `Importante: por ser mayor de 65 años, requiere coordinación especial previa.`
                 : ``
             }
 
