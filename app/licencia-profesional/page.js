@@ -235,7 +235,7 @@ async function enviarWhatsappPreReserva({
         body: JSON.stringify({
             telefono: formatearTelefonoWhatsApp(telefono),
             usarPlantilla: true,
-            nombrePlantilla: "prereserva_turno_medico_v3",
+            nombrePlantilla: "prereserva_turno_medico_v4",
             idioma: "es_AR",
             mensaje,
             variablesPlantilla,
@@ -511,7 +511,10 @@ Para enviar comprobantes de pago o realizar consultas, comuníquese con nuestro 
 El turno será confirmado únicamente luego de recibir y validar el comprobante.
 
 Vencimiento del pago: ${plazoPago}.`;
-
+        const avisoMayor65Whatsapp =
+            form.mayor65 === "Sí"
+                ? "🚨 IMPORTANTE - MAYOR DE 65 AÑOS. Por normativa vigente, las personas mayores de 65 años requieren una evaluación médica y/o documentación complementaria previa a la emisión del certificado. Nuestro equipo administrativo se comunicará para coordinar los pasos necesarios antes de confirmar la continuidad del trámite."
+                : "Información adicional no requerida.";
         const variablesPlantilla = [
             form.nombre.trim(),
             "Licencia Profesional",
@@ -523,6 +526,7 @@ Vencimiento del pago: ${plazoPago}.`;
             pago?.alias || "",
             pago?.titular || "",
             plazoPago,
+            avisoMayor65Whatsapp,
         ];
 
         try {
