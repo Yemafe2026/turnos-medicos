@@ -6,7 +6,7 @@ import { supabase } from "../supabase";
 const locaciones = ["Sede Cipolletti", "Sede Neuquén"];
 
 const IMPORTE_PROFESIONAL_ESTANDAR = 150000;
-const IMPORTE_PROFESIONAL_BENEFICIO = 100000;
+const IMPORTE_PROFESIONAL_BENEFICIO = 110000;
 
 const condicionesBeneficio = [
     "Personal de Policía de la Provincia de Río Negro",
