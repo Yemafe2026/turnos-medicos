@@ -78,7 +78,7 @@ function depurarTurnosParaIndicadores(turnos) {
     const mapa = {};
 
     turnos.forEach((t) => {
-        const clave = `${t.dni || ""}-${t.fecha || ""}-${t.locacion || ""}`;
+        const clave = `${t.dni || ""}`;
         const actual = mapa[clave];
 
         if (!actual) {
