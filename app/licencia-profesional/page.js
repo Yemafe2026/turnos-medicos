@@ -631,7 +631,14 @@ Vencimiento del pago: ${plazoPago}.`;
                             className="w-full border-2 border-slate-700 rounded-xl p-3 text-slate-950 placeholder:text-slate-700 bg-white font-medium"
                             placeholder="Nombre y apellido"
                             value={form.nombre}
-                            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                            onChange={(e) =>
+                                setForm({
+                                    ...form,
+                                    nombre: e.target.value
+                                        .toUpperCase()
+                                        .replace(/[^A-ZÁÉÍÓÚÜÑ\s]/g, "")
+                                })
+                            }
                         />
 
                         <input
@@ -639,7 +646,10 @@ Vencimiento del pago: ${plazoPago}.`;
                             placeholder="DNI"
                             value={form.dni}
                             onChange={(e) =>
-                                setForm({ ...form, dni: e.target.value.replace(/\D/g, "") })
+                                setForm({
+                                    ...form,
+                                    dni: e.target.value.replace(/\D/g, "").slice(0, 8)
+                                })
                             }
                         />
 
