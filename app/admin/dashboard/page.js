@@ -65,7 +65,37 @@ function resumenVacio() {
         reprogramadasAusentes: 0,
     };
 }
+function depurarTurnosParaIndicadores(turnos) {
+    const prioridadEstado = {
+        Realizado: 5,
+        Confirmado: 4,
+        Ausente: 3,
+        "Pendiente de pago": 2,
+        "No Confirmado": 1,
+        Cancelado: 1,
+    };
 
+    const mapa = {};
+
+    turnos.forEach((t) => {
+        const clave = `${t.dni || ""}-${t.fecha || ""}-${t.locacion || ""}`;
+        const actual = mapa[clave];
+
+        if (!actual) {
+            mapa[clave] = t;
+            return;
+        }
+
+        const prioridadActual = prioridadEstado[actual.estado] || 0;
+        const prioridadNuevo = prioridadEstado[t.estado] || 0;
+
+        if (prioridadNuevo > prioridadActual) {
+            mapa[clave] = t;
+        }
+    });
+
+    return Object.values(mapa);
+}
 function porcentaje(numerador, denominador) {
     if (!denominador || denominador <= 0) return 0;
     return (numerador / denominador) * 100;
@@ -191,8 +221,12 @@ export default function AdminDashboardPage() {
         });
     }, [turnos, filtroAnio, filtroMes, filtroSede, perfilAdmin, usuarioLimitadoPorSede]);
 
+    const turnosParaIndicadores = useMemo(() => {
+        return depurarTurnosParaIndicadores(turnosFiltrados);
+    }, [turnosFiltrados]);
+
     const resumenGeneral = useMemo(() => {
-        return turnosFiltrados.reduce((acc, t) => {
+        return turnosParaIndicadores.reduce((acc, t) => {
             const estado = t.estado || "";
 
             if (estado === "Confirmado") acc.confirmados += 1;
@@ -221,7 +255,7 @@ export default function AdminDashboardPage() {
 
             return acc;
         }, resumenVacio());
-    }, [turnosFiltrados]);
+    }, [turnosParaIndicadores]);
     const diasTranscurridos = useMemo(() => {
         if (turnosFiltrados.length === 0) return 1;
 
@@ -284,7 +318,7 @@ export default function AdminDashboardPage() {
     const resumenPorSede = useMemo(() => {
         const mapa = {};
 
-        turnosFiltrados.forEach((t) => {
+        turnosParaIndicadores.forEach((t) => {
             const sede = t.locacion || "Sin sede";
             const estado = t.estado || "";
 
@@ -325,12 +359,12 @@ export default function AdminDashboardPage() {
                     (ordenSedes[b.sede] || 999)
                 );
             });
-    }, [turnosFiltrados]);
+    }, [turnosParaIndicadores]);
 
     const resumenMensual = useMemo(() => {
         const mapa = {};
 
-        turnosFiltrados.forEach((t) => {
+        turnosParaIndicadores.forEach((t) => {
             const fecha = t.fecha || "";
             const anio = obtenerAnio(fecha);
             const mes = obtenerMes(fecha);
@@ -395,7 +429,7 @@ export default function AdminDashboardPage() {
                 (ordenSedes[b.sede] || 999)
             );
         });
-    }, [turnosFiltrados]);
+    }, [turnosParaIndicadores]);
 
     return (
         <main className="min-h-screen bg-slate-100 p-4">
@@ -487,6 +521,13 @@ export default function AdminDashboardPage() {
                                 Registros analizados:{" "}
                                 <span className="font-bold text-slate-900">
                                     {turnosFiltrados.length}
+                                </span>
+                            </p>
+
+                            <p>
+                                Casos únicos para indicadores:{" "}
+                                <span className="font-bold text-green-700">
+                                    {turnosParaIndicadores.length}
                                 </span>
                             </p>
 
