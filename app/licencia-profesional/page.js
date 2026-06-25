@@ -157,6 +157,19 @@ function esDiaHabil(fecha) {
     return diaSemana !== 0 && diaSemana !== 6;
 }
 
+function esMartesEnCipolletti(fecha, locacion) {
+    if (!fecha || !locacion) return false;
+
+    const [anio, mes, dia] = fecha.split("-").map(Number);
+    const fechaLocal = new Date(anio, mes - 1, dia);
+    const diaSemana = fechaLocal.getDay();
+
+    return (
+        diaSemana === 2 &&
+        String(locacion).trim().toLowerCase().includes("cipolletti")
+    );
+}
+
 async function validarIdentidadPaciente(nombre, dni) {
     const nombreLimpio = nombre.trim();
     const nombreNormalizado = normalizarTexto(nombreLimpio);
@@ -377,6 +390,13 @@ export default function LicenciaProfesionalPage() {
                 return;
             }
 
+            // NO PERMITIR MARTES EN CIPOLLETTI PARA LICENCIA PROFESIONAL
+            if (esMartesEnCipolletti(form.fecha, form.locacion)) {
+                setError(
+                    "No se toman turnos de Licencia Profesional los días martes en la sede Cipolletti. Seleccione otra fecha."
+                );
+                return;
+            }
 
             const celularLimpio = normalizarCelular(form.celular);
             const dniLimpio = String(form.dni || "").replace(/\D/g, "");
@@ -427,7 +447,12 @@ export default function LicenciaProfesionalPage() {
             setError("Seleccione un método de pago.");
             return;
         }
-
+        if (esMartesEnCipolletti(form.fecha, form.locacion)) {
+            setError(
+                "No se toman turnos de Licencia Profesional los días martes en la sede Cipolletti. Seleccione otra fecha."
+            );
+            return;
+        }
         const celularLimpio = normalizarCelular(form.celular);
         const pago = datosPagoPorLocacion[form.locacion];
         const vencimiento = calcularVencimientoPago(form.fecha, form.horario);
