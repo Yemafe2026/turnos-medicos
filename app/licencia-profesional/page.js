@@ -21,16 +21,22 @@ const direccionesLaboratorio = {
     "Sede Plaza Huincul": "A definir",
 };
 
+const horariosLaboratorio = {
+    "Sede Cipolletti": "de 07:00 a 10:00 hs",
+    "Sede Neuquén": "de 08:00 a 11:00 hs",
+    "Sede Plaza Huincul": "horario a definir",
+};
+
 const direccionesCentroMedico = {
     "Sede Cipolletti": "Alem 257",
-    "Sede Neuquén": "Cristóbal Colón 338",
+    "Sede Neuquén": "Cristóbal Colón 388",
     "Sede Plaza Huincul": "A definir",
 };
 
 const datosPagoPorLocacion = {
     "Sede Cipolletti": {
-        alias: "CUENCA.CUADRA.GUSTO",
-        titular: "HUINCU MED S.A.S",
+        alias: "POSE.MARCA.REBAJAR",
+        titular: "VANNLOGIC S.A.S",
     },
     "Sede Neuquén": {
         alias: "POSE.MARCA.REBAJAR",
@@ -248,7 +254,7 @@ async function enviarWhatsappPreReserva({
         body: JSON.stringify({
             telefono: formatearTelefonoWhatsApp(telefono),
             usarPlantilla: true,
-            nombrePlantilla: "prereserva_turno_medico_v4",
+            nombrePlantilla: "prereserva_turno_medico_v5",
             idioma: "es_AR",
             mensaje,
             variablesPlantilla,
@@ -453,6 +459,7 @@ export default function LicenciaProfesionalPage() {
             );
             return;
         }
+
         const celularLimpio = normalizarCelular(form.celular);
         const pago = datosPagoPorLocacion[form.locacion];
         const vencimiento = calcularVencimientoPago(form.fecha, form.horario);
@@ -514,7 +521,7 @@ ${form.locacion === "Sede Cipolletti"
             }
 
 ${form.tieneLaboratorioReciente === "No"
-                ? `Laboratorio: debe presentarse desde las 08:00 hs hasta las 10:00.
+                ? `Laboratorio: debe presentarse ${horariosLaboratorio[form.locacion]}.
 Dirección laboratorio: ${direccionesLaboratorio[form.locacion]}
 Indicaciones: ayuno mínimo de 8 horas.`
                 : `Laboratorio: usted indicó que posee estudios realizados dentro de los últimos 60 días.`
@@ -540,6 +547,14 @@ Vencimiento del pago: ${plazoPago}.`;
             form.mayor65 === "Sí"
                 ? "🚨 IMPORTANTE - MAYOR DE 65 AÑOS. Por normativa vigente, las personas mayores de 65 años requieren una evaluación médica y/o documentación complementaria previa a la emisión del certificado. Nuestro equipo administrativo se comunicará para coordinar los pasos necesarios antes de confirmar la continuidad del trámite."
                 : "Información adicional no requerida.";
+
+        const informacionLaboratorioWhatsapp =
+            form.tieneLaboratorioReciente === "No"
+                ? `Laboratorio de análisis clínicos:
+Deberá presentarse en el laboratorio correspondiente ${horariosLaboratorio[form.locacion] || "en horario a definir"}.
+Recuerde concurrir con ayuno mínimo de 8 horas.`
+                : "Laboratorio: usted indicó que posee estudios realizados dentro de los últimos 60 días.";
+
         const variablesPlantilla = [
             form.nombre.trim(),
             "Licencia Profesional",
@@ -552,6 +567,7 @@ Vencimiento del pago: ${plazoPago}.`;
             pago?.titular || "",
             plazoPago,
             avisoMayor65Whatsapp,
+            informacionLaboratorioWhatsapp,
         ];
 
         try {
@@ -1050,7 +1066,9 @@ Vencimiento del pago: ${plazoPago}.`;
                                 <h3 className="font-semibold text-blue-800">
                                     Indicaciones de laboratorio
                                 </h3>
-                                <p>Debe presentarse entre las <strong>08:00 hs y las 10:00 hs.</strong>.</p>
+                                <p>
+                                    Debe presentarse <strong>{horariosLaboratorio[form.locacion]}</strong>.
+                                </p>
                                 <p>
                                     <strong>Dirección:</strong>{" "}
                                     {direccionesLaboratorio[form.locacion]}
