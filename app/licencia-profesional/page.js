@@ -546,14 +546,12 @@ Vencimiento del pago: ${plazoPago}.`;
         const avisoMayor65Whatsapp =
             form.mayor65 === "Sí"
                 ? "🚨 IMPORTANTE - MAYOR DE 65 AÑOS. Por normativa vigente, las personas mayores de 65 años requieren una evaluación médica y/o documentación complementaria previa a la emisión del certificado. Nuestro equipo administrativo se comunicará para coordinar los pasos necesarios antes de confirmar la continuidad del trámite."
-                : "Información adicional no requerida.";
+                : "-";
 
         const informacionLaboratorioWhatsapp =
             form.tieneLaboratorioReciente === "No"
-                ? `Laboratorio de análisis clínicos:
-Deberá presentarse en el laboratorio correspondiente ${horariosLaboratorio[form.locacion] || "en horario a definir"}.
-Recuerde concurrir con ayuno mínimo de 8 horas.`
-                : "Laboratorio: usted indicó que posee estudios realizados dentro de los últimos 60 días.";
+                ? `Laboratorio: ${horariosLaboratorio[form.locacion] || "horario a definir"}. Ayuno 8 hs.`
+                : "Presentar laboratorio realizado dentro de los últimos 60 días.";
 
         const variablesPlantilla = [
             form.nombre.trim(),
