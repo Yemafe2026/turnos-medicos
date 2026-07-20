@@ -45,7 +45,11 @@ export async function POST(req) {
                     type: "body",
                     parameters: variablesPlantilla.map((valor) => ({
                         type: "text",
-                        text: String(valor || "-"),
+                        text: String(valor || "-")
+                            .replace(/\r?\n/g, " ")
+                            .replace(/\t/g, " ")
+                            .replace(/\s{2,}/g, " ")
+                            .trim(),
                     })),
                 },
             ];
@@ -58,7 +62,11 @@ export async function POST(req) {
                     parameters: [
                         {
                             type: "text",
-                            text: String(tokenBoton),
+                            text: String(tokenBoton)
+                                .replace(/\r?\n/g, " ")
+                                .replace(/\t/g, " ")
+                                .replace(/\s{2,}/g, " ")
+                                .trim(),
                         },
                     ],
                 });
