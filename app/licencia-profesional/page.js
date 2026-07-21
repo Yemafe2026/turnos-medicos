@@ -185,11 +185,14 @@ async function validarIdentidadPaciente(nombre, dni) {
 
     const { data: registrosPorDni, error: errorDni } = await supabase
         .from("turnos")
-        .select("nombre, dni, estado, fecha, hora")
+        .select("nombre, dni, estado, fecha")
         .eq("dni", dniLimpio);
 
     if (errorDni) {
+        console.error("=== ERROR SUPABASE VALIDANDO DNI ===");
         console.error(errorDni);
+        console.error("DNI consultado:", dniLimpio);
+
         return {
             valido: false,
             mensaje: "No se pudo validar el DNI del paciente.",
