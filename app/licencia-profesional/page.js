@@ -181,9 +181,11 @@ async function validarIdentidadPaciente(nombre, dni) {
     const nombreNormalizado = normalizarTexto(nombreLimpio);
     const dniLimpio = String(dni || "").replace(/\D/g, "");
 
+    const estadosActivos = ["Pendiente de pago", "Confirmado"];
+
     const { data: registrosPorDni, error: errorDni } = await supabase
         .from("turnos")
-        .select("nombre, dni")
+        .select("nombre, dni, estado, fecha, hora")
         .eq("dni", dniLimpio);
 
     if (errorDni) {
@@ -191,6 +193,49 @@ async function validarIdentidadPaciente(nombre, dni) {
         return {
             valido: false,
             mensaje: "No se pudo validar el DNI del paciente.",
+        };
+    }
+
+    // ===== DIAGNÓSTICO TEMPORAL =====
+    console.log("=== VALIDACIÓN DUPLICADOS ===");
+    console.log("Nombre ingresado:", nombreLimpio);
+    console.log("Nombre normalizado:", nombreNormalizado);
+    console.log("DNI ingresado:", dniLimpio);
+    console.log("Registros encontrados por DNI:", registrosPorDni);
+    // ================================
+
+    const turnoActivoExistente = registrosPorDni?.find((t) => {
+        const mismoDni =
+            String(t.dni || "").replace(/\D/g, "") === dniLimpio;
+
+        const mismoNombre =
+            normalizarTexto(t.nombre) === nombreNormalizado;
+
+        const estadoActivo = estadosActivos.includes(t.estado);
+
+        // ===== DIAGNÓSTICO TEMPORAL =====
+        console.log("Registro evaluado:", {
+            nombreBD: t.nombre,
+            dniBD: t.dni,
+            estadoBD: t.estado,
+            mismoDni,
+            mismoNombre,
+            estadoActivo,
+        });
+        // ================================
+
+        return mismoDni && mismoNombre && estadoActivo;
+    });
+
+    console.log("Turno activo encontrado:", turnoActivoExistente);
+
+    if (turnoActivoExistente) {
+        return {
+            valido: false,
+            mensaje:
+                `El paciente ${nombreLimpio}, DNI ${dniLimpio}, ` +
+                `ya posee un turno activo en estado "${turnoActivoExistente.estado}". ` +
+                `No es posible solicitar otro turno hasta que finalice el proceso actual.`,
         };
     }
 
@@ -210,7 +255,7 @@ async function validarIdentidadPaciente(nombre, dni) {
 
     const { data: registrosPorNombre, error: errorNombre } = await supabase
         .from("turnos")
-        .select("nombre, dni")
+        .select("nombre, dni, estado")
         .ilike("nombre", `%${nombreLimpio}%`);
 
     if (errorNombre) {
