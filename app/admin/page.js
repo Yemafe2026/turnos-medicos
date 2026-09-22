@@ -139,14 +139,42 @@ export default function AdminPage() {
   const cargarTurnos = async () => {
     setCargando(true);
 
-    const { data } = await supabase
-      .from("turnos")
-      .select("*")
-      .order("fecha", { ascending: true })
-      .order("horario", { ascending: true });
+    try {
+      const TAMANO_BLOQUE = 1000;
+      let desde = 0;
+      let todosLosTurnos = [];
+      let seguirCargando = true;
 
-    setTurnos(data || []);
-    setCargando(false);
+      while (seguirCargando) {
+        const { data, error } = await supabase
+          .from("turnos")
+          .select("*")
+          .order("fecha", { ascending: false })
+          .order("horario", { ascending: true })
+          .range(desde, desde + TAMANO_BLOQUE - 1);
+
+        if (error) {
+          console.error("Error al cargar turnos:", error);
+          break;
+        }
+
+        const bloque = data || [];
+
+        todosLosTurnos = [...todosLosTurnos, ...bloque];
+
+        if (bloque.length < TAMANO_BLOQUE) {
+          seguirCargando = false;
+        } else {
+          desde += TAMANO_BLOQUE;
+        }
+      }
+
+      setTurnos(todosLosTurnos);
+    } catch (error) {
+      console.error("Error inesperado al cargar turnos:", error);
+    } finally {
+      setCargando(false);
+    }
   };
 
   useEffect(() => {
@@ -552,8 +580,8 @@ export default function AdminPage() {
                   key={t.id}
                   id={`turno-${t.id}`}
                   className={`rounded-2xl shadow border p-4 ${t.mayor65 === true || t.mayor65 === "Sí"
-                      ? "bg-red-100 border-red-500"
-                      : "bg-white border-slate-100"
+                    ? "bg-red-100 border-red-500"
+                    : "bg-white border-slate-100"
                     }`}
                 >
                   <div className="grid grid-cols-12 gap-4 items-stretch">
