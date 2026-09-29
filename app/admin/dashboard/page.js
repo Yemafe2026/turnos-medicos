@@ -187,12 +187,36 @@ export default function AdminDashboardPage() {
 
         setPerfilAdmin(perfil);
 
-        const { data } = await supabase
-            .from("turnos")
-            .select("*")
-            .order("fecha", { ascending: true });
+        const TAMANO_BLOQUE = 1000;
+        let desde = 0;
+        let todosLosTurnos = [];
+        let seguirCargando = true;
 
-        setTurnos(data || []);
+        while (seguirCargando) {
+            const { data, error } = await supabase
+                .from("turnos")
+                .select("*")
+                .order("fecha", { ascending: false })
+                .order("horario", { ascending: true })
+                .range(desde, desde + TAMANO_BLOQUE - 1);
+
+            if (error) {
+                console.error("Error al cargar turnos del dashboard:", error);
+                break;
+            }
+
+            const bloque = data || [];
+
+            todosLosTurnos = [...todosLosTurnos, ...bloque];
+
+            if (bloque.length < TAMANO_BLOQUE) {
+                seguirCargando = false;
+            } else {
+                desde += TAMANO_BLOQUE;
+            }
+        }
+
+        setTurnos(todosLosTurnos);
         setCargando(false);
     };
 
