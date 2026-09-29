@@ -104,9 +104,28 @@ function porcentaje(numerador, denominador) {
 function formatearPorcentaje(valor) {
     return `${Number(valor || 0).toFixed(1)}%`;
 }
+const feriados2026 = [
+    "2026-10-12",
+    "2026-11-09",
+    "2026-11-20",
+    "2026-12-07",
+    "2026-12-08",
+    "2026-12-25",
+];
+
 function esDiaHabil(fecha) {
-    const dia = fecha.getDay();
-    return dia !== 0 && dia !== 6;
+    const diaSemana = fecha.getDay();
+
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+
+    const fechaTexto = `${anio}-${mes}-${dia}`;
+
+    const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+    const esFeriado = feriados2026.includes(fechaTexto);
+
+    return !esFinDeSemana && !esFeriado;
 }
 
 function contarDiasHabilesDesdeHasta(fechaInicio, fechaFin) {

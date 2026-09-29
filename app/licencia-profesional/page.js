@@ -153,6 +153,15 @@ function formatearPlazoPago(fecha, horario, vencimientoISO) {
     return "60 minutos desde la generación de la pre-reserva";
 }
 
+const feriados2026 = [
+    "2026-10-12",
+    "2026-11-09",
+    "2026-11-20",
+    "2026-12-07",
+    "2026-12-08",
+    "2026-12-25",
+];
+
 function esDiaHabil(fecha) {
     if (!fecha) return false;
 
@@ -160,7 +169,10 @@ function esDiaHabil(fecha) {
     const fechaLocal = new Date(anio, mes - 1, dia);
     const diaSemana = fechaLocal.getDay();
 
-    return diaSemana !== 0 && diaSemana !== 6;
+    const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+    const esFeriado = feriados2026.includes(fecha);
+
+    return !esFinDeSemana && !esFeriado;
 }
 
 function esMartesEnCipolletti(fecha, locacion) {
@@ -417,10 +429,10 @@ export default function LicenciaProfesionalPage() {
                 return;
             }
 
-            // NO PERMITIR SÁBADOS NI DOMINGOS
+            // NO PERMITIR SÁBADOS, DOMINGOS NI FERIADOS
             if (!esDiaHabil(form.fecha)) {
                 setError(
-                    "Seleccione una fecha de lunes a viernes. No se toman turnos sábados ni domingos."
+                    "La fecha seleccionada no está disponible. No se toman turnos sábados, domingos ni feriados."
                 );
                 return;
             }
