@@ -5,8 +5,9 @@ import { supabase } from "../supabase";
 
 const locaciones = ["Sede Cipolletti", "Sede Neuquén"];
 
-const IMPORTE_PROFESIONAL_ESTANDAR = 150000;
-const IMPORTE_PROFESIONAL_BENEFICIO = 110000;
+const IMPORTE_PROFESIONAL_ESTANDAR = 185000;
+const IMPORTE_PROFESIONAL_EFECTIVO = 150000;
+const IMPORTE_PROFESIONAL_BENEFICIO = 150000;
 
 const condicionesBeneficio = [
     "Personal de Policía de la Provincia de Río Negro",
@@ -106,6 +107,10 @@ function calcularImporteServicio(form) {
         form.condicionBeneficio !== "Ninguno de los anteriores"
     ) {
         return IMPORTE_PROFESIONAL_BENEFICIO;
+    }
+
+    if (form.metodoPago === "Efectivo") {
+        return IMPORTE_PROFESIONAL_EFECTIVO;
     }
 
     return IMPORTE_PROFESIONAL_ESTANDAR;
@@ -337,9 +342,11 @@ export default function LicenciaProfesionalPage() {
     const permiteEfectivo =
         form.fecha && form.horario && faltanMasDe24Horas(form.fecha, form.horario);
 
-    const metodosPagoDisponibles = permiteEfectivo
-        ? [...metodosPagoBase, "En Sucursal"]
-        : metodosPagoBase;
+    const metodosPagoDisponibles = [
+        ...metodosPagoBase,
+        "Débito / Crédito",
+        "Efectivo",
+    ];
 
     const vencimientoPago =
         form.fecha && form.horario
@@ -575,7 +582,8 @@ ${form.mayor65 === "Sí"
 
 Método de pago: ${form.metodoPago}
 
-Datos para transferencia:
+${form.metodoPago === "Transferencia"
+                ? `Datos para transferencia:
 Alias: ${pago?.alias || ""}
 Titular: ${pago?.titular || ""}
 
@@ -583,7 +591,15 @@ IMPORTANTE:
 Para enviar comprobantes de pago o realizar consultas, comuníquese con nuestro equipo de atención por WhatsApp al +54 9 299 5281 922.
 El turno será confirmado únicamente luego de recibir y validar el comprobante.
 
-Vencimiento del pago: ${plazoPago}.`;
+Vencimiento del pago: ${plazoPago}.`
+                : `Pago presencial en la sucursal seleccionada.
+
+IMPORTANTE:
+El turno será confirmado una vez realizado y validado el pago en sucursal.
+Para realizar consultas, comuníquese con nuestro equipo de atención por WhatsApp al +54 9 299 5281 922.
+
+Plazo para realizar el pago en sucursal: ${plazoPago}.`
+            }`;
         const avisoMayor65Whatsapp =
             form.mayor65 === "Sí"
                 ? "🚨 IMPORTANTE - MAYOR DE 65 AÑOS. Por normativa vigente, las personas mayores de 65 años requieren una evaluación médica y/o documentación complementaria previa a la emisión del certificado. Nuestro equipo administrativo se comunicará para coordinar los pasos necesarios antes de confirmar la continuidad del trámite."
@@ -932,48 +948,53 @@ Vencimiento del pago: ${plazoPago}.`;
 
                         {form.horario && (
                             <div className="bg-white border rounded-2xl p-4 space-y-4">
-                                <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm">
-                                    <p className="font-semibold text-green-800">
-                                        Importe del servicio
-                                    </p>
-                                    <p className="text-2xl font-bold text-green-900">
-                                        {formatearImporte(importeServicio)}
-                                    </p>
-                                </div>
 
                                 <h3 className="font-semibold">Método de pago</h3>
 
                                 {!permiteEfectivo && (
                                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-slate-700">
-                                        Como el turno se reserva dentro de las próximas 24 hs, solo
-                                        se permite pago por transferencia bancaria. El pago debe
-                                        confirmarse dentro de los próximos 60 minutos.
+                                        Como el turno se reserva dentro de las próximas 24 hs, puede pagar por
+                                        transferencia bancaria o abonar con débito/crédito o efectivo en sucursal.
+                                        La pre-reserva deberá confirmarse dentro de los próximos 60 minutos.
                                     </div>
                                 )}
 
                                 {permiteEfectivo && (
                                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-slate-700">
                                         Como faltan más de 24 hs para el turno, puede pagar por
-                                        transferencia bancaria o en efectivo en sucursal. El pago
+                                        transferencia bancaria, débito/crédito o efectivo en sucursal. El pago
                                         debe confirmarse hasta 24 hs antes del turno.
                                     </div>
                                 )}
 
                                 <div className="grid gap-3">
-                                    {metodosPagoDisponibles.map((metodo) => (
-                                        <button
-                                            key={metodo}
-                                            type="button"
-                                            onClick={() =>
-                                                setForm({ ...form, metodoPago: metodo })
-                                            }
-                                            className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo ? "bg-orange-500 text-white border-orange-500" : "bg-white"}`}
-                                        >
-                                            {metodo}
-                                        </button>
-                                    ))}
+                                    {metodosPagoDisponibles.map((metodo) => {
+                                        const importeMetodo = calcularImporteServicio({
+                                            ...form,
+                                            metodoPago: metodo,
+                                        });
+                                        return (
+                                            <button
+                                                key={metodo}
+                                                type="button"
+                                                onClick={() =>
+                                                    setForm({ ...form, metodoPago: metodo })
+                                                }
+                                                className={`border rounded-xl p-3 text-left ${form.metodoPago === metodo
+                                                    ? "bg-orange-500 text-white border-orange-500"
+                                                    : "bg-white"
+                                                    }`}
+                                            >
+                                                {metodo === "Débito / Crédito"
+                                                    ? "Débito / Crédito (En Sucursal)"
+                                                    : metodo === "Efectivo"
+                                                        ? "Efectivo (En Sucursal)"
+                                                        : metodo}{" "}
+                                                — {formatearImporte(importeMetodo)}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-
                                 {form.metodoPago === "Transferencia" && datosPago && (
                                     <div className="bg-slate-50 border rounded-xl p-4 text-sm space-y-1">
                                         <p><strong>Alias:</strong> {datosPago.alias}</p>
@@ -1028,7 +1049,10 @@ Vencimiento del pago: ${plazoPago}.`;
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
                             Su horario quedó bloqueado provisoriamente.
                             <br />
-                            Debe realizar el pago para confirmar definitivamente el turno.
+
+                            {form.metodoPago === "Transferencia"
+                                ? "Debe realizar el pago y enviar el comprobante para confirmar definitivamente el turno."
+                                : "Debe realizar el pago en la sucursal seleccionada para confirmar definitivamente el turno."}
                         </div>
                         {form.mayor65 === "Sí" && (
                             <div className="bg-red-200 border-2 border-red-600 rounded-2xl p-5 text-sm space-y-2">
@@ -1063,7 +1087,11 @@ Vencimiento del pago: ${plazoPago}.`;
                             </p>
 
                             <p>
-                                <strong>Vencimiento del pago:</strong>{" "}
+                                <strong>
+                                    {form.metodoPago === "Transferencia"
+                                        ? "Vencimiento del pago:"
+                                        : "Plazo para realizar el pago en sucursal:"}
+                                </strong>{" "}
                                 {formatearFechaHora(vencimientoPago)}
                             </p>
 
@@ -1080,22 +1108,44 @@ Vencimiento del pago: ${plazoPago}.`;
                                 </div>
 
                                 <div className="text-sm text-red-800 space-y-2">
-                                    <p>
-                                        Para enviar comprobantes de pago o realizar consultas,
-                                        comuníquese con nuestro equipo de atención por WhatsApp al{" "}
-                                        <strong>+54 9 299 5281 922</strong>.
-                                    </p>
+                                    {form.metodoPago === "Transferencia" ? (
+                                        <>
+                                            <p>
+                                                Para enviar comprobantes de pago o realizar consultas,
+                                                comuníquese con nuestro equipo de atención por WhatsApp al{" "}
+                                                <strong>+54 9 299 5281 922</strong>.
+                                            </p>
 
-                                    <p className="font-semibold text-slate-950">
-                                        El turno será confirmado únicamente luego de recibir y validar
-                                        el comprobante.
-                                    </p>
+                                            <p className="font-semibold text-slate-950">
+                                                El turno será confirmado únicamente luego de recibir y validar
+                                                el comprobante.
+                                            </p>
 
-                                    <p>
-                                        Si el comprobante no se recibe antes del vencimiento
-                                        informado, la pre-reserva podrá cancelarse automáticamente y
-                                        el horario volverá a quedar disponible.
-                                    </p>
+                                            <p>
+                                                Si el comprobante no se recibe antes del vencimiento informado,
+                                                la pre-reserva podrá cancelarse automáticamente y el horario
+                                                volverá a quedar disponible.
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p>
+                                                El pago deberá realizarse presencialmente en la sucursal
+                                                seleccionada.
+                                            </p>
+
+                                            <p className="font-semibold text-slate-950">
+                                                El turno será confirmado una vez realizado y validado el pago
+                                                en sucursal.
+                                            </p>
+
+                                            <p>
+                                                Para realizar consultas, comuníquese con nuestro equipo de
+                                                atención por WhatsApp al{" "}
+                                                <strong>+54 9 299 5281 922</strong>.
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
